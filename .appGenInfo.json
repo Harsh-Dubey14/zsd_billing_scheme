@@ -1,0 +1,23 @@
+{
+  "generationParameters": {
+    "generationDate": "Fri Aug 21 2026 00:00:00 GMT+0000 (Coordinated Universal Time)",
+    "generatorPlatform": "SAP Business Application Studio",
+    "serviceType": "OData URL",
+    "metadataFilename": "",
+    "serviceUrl": "https://my433482-api.s4hana.cloud.sap/sap/opu/odata4/sap/zsb_billing_scheme/srvd/sap/zsd_billing_scheme/0001/",
+    "appName": "billing-scheme",
+    "appTitle": "App Title",
+    "appDescription": "An SAP Fiori application.",
+    "appNamespace": "com.zeel.billingscheme",
+    "ui5Theme": "sap_horizon",
+    "ui5Version": "1.142.12",
+    "enableEslint": true,
+    "enableTypeScript": false,
+    "showMockDataInfo": true,
+    "generatorVersion": "1.27.0",
+    "template": "Basic V4",
+    "generatorName": "SAP Fiori Application Generator",
+    "entityRelatedConfig": [],
+    "launchText": "To launch the generated application, run the following from the generated application root folder:\n\n```\n    npm start\n```"
+  }
+}

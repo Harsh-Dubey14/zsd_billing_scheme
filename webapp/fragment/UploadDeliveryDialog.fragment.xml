@@ -1,0 +1,33 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:unified="sap.ui.unified">
+
+    <Dialog
+        id="uploadDeliveryDialog"
+        title="Upload Delivery Numbers"
+        contentWidth="28rem">
+
+        <content>
+            <VBox class="sapUiMediumMargin">
+                <Text
+                    id="uploadDeliveryText"
+                    text="Select an Excel file (.xlsx, .xls, .csv) or a text file (.txt) with one delivery number per row or line."
+                    class="sapUiSmallMarginBottom" />
+                <unified:FileUploader
+                    id="deliveryFileUploader"
+                    width="100%"
+                    sameFilenameAllowed="true"
+                    fileType="xlsx,xls,csv,txt"
+                    change=".onDeliveryFileChange" />
+            </VBox>
+        </content>
+
+        <endButton>
+            <Button
+                id="btnUploadDeliveryClose"
+                text="Close"
+                press=".onCloseUploadDialog" />
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

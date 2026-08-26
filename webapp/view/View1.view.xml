@@ -1,0 +1,97 @@
+<mvc:View controllerName="com.zeel.billingscheme.billingscheme.controller.View1"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    height="100%" displayBlock="true">
+    <Page id="page" title="{i18n>title}" showHeader="true" showFooter="false" enableScrolling="true" class="sapUiResponsiveContentPadding zbsPage">
+        <content>
+
+            <!-- Selection Criteria -->
+            <Panel headerText="Selection Criteria" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
+                <HBox wrap="Wrap" class="sapUiSmallMargin zbsSelectionRow">
+                    <VBox class="zbsSelectionCol">
+                        <layoutData>
+                            <FlexItemData growFactor="1" baseSize="0%" />
+                        </layoutData>
+                        <Label text="Delivery Number(s)" design="Bold" labelFor="deliveryInput" class="sapUiTinyMarginBottom" />
+
+                        <MultiInput id="deliveryInput"
+                            width="100%"
+                            placeholder="Enter a delivery number and press Enter (comma/space separated for multiple)"
+                            submit=".onDeliverySubmit"
+                            tokenUpdate=".onDeliveryTokenUpdate" />
+
+                        <HBox class="sapUiTinyMarginTop" wrap="Wrap" alignItems="Center">
+                            <Button text="Upload Document" icon="sap-icon://upload" type="Default" press=".onOpenUploadDialog" class="sapUiTinyMarginEnd sapUiTinyMarginTop" />
+                            <ToolbarSpacer />
+                            <Button text="Clear All" icon="sap-icon://clear-all" type="Transparent" press=".onClearAll" enabled="{/hasDeliveryNumbers}" class="sapUiTinyMarginEnd sapUiTinyMarginTop" />
+                            <Button text="Get Delivery Items" icon="sap-icon://action" type="Emphasized" press=".onFetchItems" enabled="{/hasDeliveryNumbers}" class="sapUiTinyMarginTop" />
+                        </HBox>
+                    </VBox>
+
+                    <VBox class="zbsSelectionCol">
+                        <layoutData>
+                            <FlexItemData growFactor="1" baseSize="0%" />
+                        </layoutData>
+                        <Label text="Scheme" design="Bold" class="sapUiTinyMarginBottom" />
+
+                        <RadioButtonGroup id="schemeTypeGroup" columns="2" select=".onSchemeTypeSelect">
+                            <RadioButton text="Basic" />
+                            <RadioButton text="Advance" />
+                        </RadioButtonGroup>
+                    </VBox>
+                </HBox>
+
+                <MessageStrip text="{/schemeSummaryText}" type="Information" showIcon="true" visible="{/hasSchemeDetails}" class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiSmallMarginBottom" />
+            </Panel>
+
+            <!-- Delivery Items -->
+            <Panel headerText="Delivery Items" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
+                <Table id="itemsTable"
+                    items="{path: '/items', sorter: {path: 'groupLabel', group: true}}"
+                    noDataText="No delivery items yet. Enter delivery number(s) above and choose &quot;Get Delivery Items&quot;."
+                    sticky="ColumnHeaders,HeaderToolbar,GroupHeaders"
+                    growing="true"
+                    growingThreshold="50"
+                    autoPopinMode="true"
+                    popinLayout="GridSmall"
+                    class="zbsItemsTable">
+                    
+
+                    <columns>
+                        <Column width="4rem" hAlign="Begin" importance="High"><Text text="Sr No." /></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true" importance="High"><Text text="Product" /></Column>
+                        <Column width="7rem" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Color" /></Column>
+                        <Column width="6rem" importance="High"><Text text="Size" /></Column>
+                        <Column width="8rem" minScreenWidth="Desktop" demandPopin="true" importance="Low"><Text text="Brand" /></Column>
+                        <Column width="7rem" minScreenWidth="Desktop" demandPopin="true" importance="Low"><Text text="HSN Code" /></Column>
+                        <Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Bag" /></Column>
+                        <Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Pack" /></Column>
+                        <Column width="5.5rem" hAlign="End" importance="High"><Text text="Qty" /></Column>
+                        <Column width="5rem" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Unit" /></Column>
+                        <Column width="7rem" hAlign="End" importance="High"><Text text="Rate" /></Column>
+                    </columns>
+
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <Text text="{srNo}" />
+                                <Text text="{product}" />
+                                <Text text="{color}" />
+                                <Text text="{size}" />
+                                <Text text="{brand}" />
+                                <Text text="{hsnCode}" />
+                                <Text text="{bag}" />
+                                <Text text="{pack}" />
+                                <Text text="{qty}" />
+                                <Text text="{unit}" />
+                                <ObjectNumber number="{rate}" unit="INR" />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </Panel>
+
+        </content>
+    </Page>
+</mvc:View>

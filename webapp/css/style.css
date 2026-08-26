@@ -1,0 +1,15 @@
+.zbsPage .sapMPanel {
+    margin-bottom: 0.5rem;
+}
+
+.zbsItemsTable .sapMGHLIGroupTitle {
+    font-weight: 600;
+}
+
+.zbsSelectionRow {
+    gap: 1.5rem;
+}
+
+.zbsSelectionCol {
+    min-width: 320px;
+}
