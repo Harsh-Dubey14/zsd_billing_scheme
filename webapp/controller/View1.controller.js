@@ -21,8 +21,10 @@ sap.ui.define([
                 deliveryCount: 0,
                 hasDeliveryNumbers: false,
                 schemeDetails: null,
+                schemeSelectedText: "",
                 schemeSummaryText: "",
-                hasSchemeDetails: false
+                hasSchemeDetails: false,
+                billingItems: []
             }));
 
             this._attachDeliveryPasteHandler();
@@ -109,14 +111,9 @@ sap.ui.define([
 
         onClearAll() {
             var oInput = this.byId("deliveryInput");
-            var oSchemeGroup = this.byId("schemeTypeGroup");
 
             if (oInput) {
                 oInput.removeAllTokens();
-            }
-
-            if (oSchemeGroup) {
-                oSchemeGroup.setSelectedIndex(-1);
             }
 
             var oModel = this.getView().getModel();
@@ -125,8 +122,10 @@ sap.ui.define([
             oModel.setProperty("/itemCount", 0);
             oModel.setProperty("/deliveryCount", 0);
             oModel.setProperty("/schemeDetails", null);
+            oModel.setProperty("/schemeSelectedText", "");
             oModel.setProperty("/schemeSummaryText", "");
             oModel.setProperty("/hasSchemeDetails", false);
+            oModel.setProperty("/billingItems", []);
 
             this._syncDeliveryState();
             MessageToast.show("Cleared.");
@@ -323,12 +322,14 @@ sap.ui.define([
                     oModel.setProperty("/itemCount", aAllItems.length);
                     oModel.setProperty("/deliveryCount", aDeliveryNumbers.length);
 
+                    this._rebuildBillingItems();
+
                     MessageToast.show(
                         aAllItems.length ?
                             aAllItems.length + " line item(s) loaded for " + aDeliveryNumbers.length + " delivery number(s)." :
                             "No delivery items found for the entered delivery number(s)."
                     );
-                })
+                }.bind(this))
                 .catch(function (oError) {
                     MessageBox.error("Could not fetch delivery items: " + (oError && oError.message ? oError.message : oError));
                 })
@@ -405,33 +406,67 @@ sap.ui.define([
         // Scheme selection
         // ---------------------------------------------------------------
 
-        onSchemeTypeSelect(oEvent) {
-            var oModel = this.getView().getModel();
-            var oGroup = oEvent.getSource();
-            var iSelectedIndex = oEvent.getParameter("selectedIndex");
-            var aButtons = oGroup.getButtons();
-            var oSelectedButton = aButtons[iSelectedIndex];
-            var sSchemeType = oSelectedButton ? oSelectedButton.getText() : "";
+        onSchemeValueHelpRequest() {
+            var oView = this.getView();
 
-            if (!sSchemeType) {
+            if (!this._pSchemeValueHelpDialog) {
+                this._pSchemeValueHelpDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "com.zeel.billingscheme.billingscheme.fragment.SchemeValueHelpDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    oDialog.setModel(new JSONModel(MockData.getSchemes()), "schemes");
+                    return oDialog;
+                });
+            }
+
+            this._pSchemeValueHelpDialog.then(function (oDialog) {
+                oDialog.open();
+            });
+        },
+
+        onSchemeValueHelpSearch(oEvent) {
+            var sQuery = oEvent.getParameter("value") || "";
+            var oBinding = oEvent.getSource().getBinding("items");
+
+            oBinding.filter(sQuery ? [
+                new Filter({
+                    filters: [
+                        new Filter("SchemeName", FilterOperator.Contains, sQuery),
+                        new Filter("SchemeType", FilterOperator.Contains, sQuery)
+                    ],
+                    and: false
+                })
+            ] : []);
+        },
+
+        onSchemeValueHelpConfirm(oEvent) {
+            var oSelectedItem = oEvent.getParameter("selectedItem");
+
+            if (!oSelectedItem) {
                 return;
             }
 
-            BusyIndicator.show(0);
+            var oSchemeDetails = oSelectedItem.getBindingContext("schemes").getObject();
+            var oModel = this.getView().getModel();
 
-            // Simulated backend call to fetch the scheme details for the
-            // chosen type; swap MockData.getSchemeDetails for a real
-            // service call once the backend is available.
-            setTimeout(function () {
-                var oSchemeDetails = MockData.getSchemeDetails(sSchemeType);
+            oModel.setProperty("/schemeDetails", oSchemeDetails);
+            oModel.setProperty("/schemeSelectedText", oSchemeDetails.SchemeName + " (" + oSchemeDetails.SchemeType + ")");
+            oModel.setProperty("/schemeSummaryText", this._formatSchemeSummary(oSchemeDetails));
+            oModel.setProperty("/hasSchemeDetails", true);
 
-                oModel.setProperty("/schemeDetails", oSchemeDetails);
-                oModel.setProperty("/schemeSummaryText", this._formatSchemeSummary(oSchemeDetails));
-                oModel.setProperty("/hasSchemeDetails", true);
+            this._rebuildBillingItems();
 
-                BusyIndicator.hide();
-                MessageToast.show("\"" + sSchemeType + "\" scheme details loaded.");
-            }.bind(this), 400);
+            MessageToast.show("\"" + oSchemeDetails.SchemeName + "\" scheme selected.");
+        },
+
+        onSchemeValueHelpCancel(oEvent) {
+            var oBinding = oEvent.getSource().getBinding("items");
+
+            if (oBinding) {
+                oBinding.filter([]);
+            }
         },
 
         _formatSchemeSummary(oSchemeDetails) {
@@ -442,6 +477,44 @@ sap.ui.define([
                 "  |  Discount 1: " + oSchemeDetails.Discount1 +
                 "  |  Discount 2: " + oSchemeDetails.Discount2 +
                 "  |  Adv Amount: " + oSchemeDetails.AdvAmount;
+        },
+
+        // ---------------------------------------------------------------
+        // Billing details (Scheme Name/Type/Dis 1/Dis 2 come from the
+        // selected scheme; the remaining calculated columns are placeholders
+        // until the calculation formulas are provided.
+        // ---------------------------------------------------------------
+
+        _rebuildBillingItems() {
+            var oModel = this.getView().getModel();
+            var aItems = oModel.getProperty("/items") || [];
+            var oScheme = oModel.getProperty("/schemeDetails");
+
+            if (!aItems.length || !oScheme) {
+                oModel.setProperty("/billingItems", []);
+                return;
+            }
+
+            var aBillingItems = aItems.map(function (oItem) {
+                return {
+                    srNo: oItem.srNo,
+                    qty: oItem.qty,
+                    unit: oItem.unit,
+                    rate: oItem.rate,
+                    schemeName: oScheme.SchemeName,
+                    schemeType: oScheme.SchemeType,
+                    discount1: oScheme.Discount1,
+                    discount2: oScheme.Discount2,
+                    rateAfterDisA: 0,
+                    rateAfterDisB: 0,
+                    valueAfterDisB: 0,
+                    gstPercent: 0,
+                    gstValue: 0,
+                    total: 0
+                };
+            });
+
+            oModel.setProperty("/billingItems", aBillingItems);
         }
     });
 });

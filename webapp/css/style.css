@@ -13,3 +13,18 @@
 .zbsSelectionCol {
     min-width: 320px;
 }
+
+.zbsBillingTable {
+    overflow-x: auto;
+}
+
+.zbsBillingTable .sapMListTblHeader,
+.zbsBillingTable .sapMListTblRow {
+    width: max-content;
+    min-width: 100%;
+}
+
+.zbsBillingTable .sapMText,
+.zbsBillingTable .sapMObjectNumberText {
+    white-space: nowrap;
+}

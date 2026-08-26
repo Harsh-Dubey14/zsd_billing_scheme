@@ -33,12 +33,15 @@
                         <layoutData>
                             <FlexItemData growFactor="1" baseSize="0%" />
                         </layoutData>
-                        <Label text="Scheme" design="Bold" class="sapUiTinyMarginBottom" />
+                        <Label text="Scheme" design="Bold" labelFor="schemeInput" class="sapUiTinyMarginBottom" />
 
-                        <RadioButtonGroup id="schemeTypeGroup" columns="2" select=".onSchemeTypeSelect">
-                            <RadioButton text="Basic" />
-                            <RadioButton text="Advance" />
-                        </RadioButtonGroup>
+                        <Input id="schemeInput"
+                            width="100%"
+                            editable="true"
+                            showValueHelp="true"
+                            valueHelpRequest=".onSchemeValueHelpRequest"
+                            placeholder="Select a scheme..."
+                            value="{/schemeSelectedText}" />
                     </VBox>
                 </HBox>
 
@@ -86,6 +89,57 @@
                                 <Text text="{qty}" />
                                 <Text text="{unit}" />
                                 <ObjectNumber number="{rate}" unit="INR" />
+                            </cells>
+                        </ColumnListItem>
+                    </items>
+                </Table>
+            </Panel>
+
+            <!-- Billing / Scheme Calculation -->
+            <Panel headerText="Billing Details" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
+                <Table id="billingTable"
+                    items="{/billingItems}"
+                    noDataText="No billing details yet. Fetch delivery items and select a scheme above."
+                    sticky="ColumnHeaders,HeaderToolbar"
+                    growing="true"
+                    growingThreshold="50"
+                    autoPopinMode="false"
+                    class="zbsItemsTable zbsBillingTable">
+
+                    <columns>
+                        <Column width="3.5rem" hAlign="Begin"><Text text="Sr No." /></Column>
+                        <Column width="4.5rem" hAlign="End"><Text text="Qty" /></Column>
+                        <Column width="4rem"><Text text="Unit" /></Column>
+                        <Column width="5.5rem" hAlign="End"><Text text="Rate" /></Column>
+                        <Column width="8rem"><Text text="Scheme Name" /></Column>
+                        <Column width="6rem"><Text text="Scheme Type" /></Column>
+                        <Column width="4rem" hAlign="End"><Text text="Dis 1" /></Column>
+                        <Column width="4rem" hAlign="End"><Text text="Dis 2" /></Column>
+                        <Column width="6.5rem" hAlign="End"><Text text="Rate After Dis A" /></Column>
+                        <Column width="6.5rem" hAlign="End"><Text text="Rate After Dis B" /></Column>
+                        <Column width="7rem" hAlign="End"><Text text="Value after Dis B" /></Column>
+                        <Column width="4.5rem" hAlign="End"><Text text="GST %" /></Column>
+                        <Column width="5.5rem" hAlign="End"><Text text="GST Value" /></Column>
+                        <Column width="5.5rem" hAlign="End"><Text text="Total" /></Column>
+                    </columns>
+
+                    <items>
+                        <ColumnListItem>
+                            <cells>
+                                <Text text="{srNo}" />
+                                <Text text="{qty}" />
+                                <Text text="{unit}" />
+                                <ObjectNumber number="{rate}" unit="INR" />
+                                <Text text="{schemeName}" />
+                                <Text text="{schemeType}" />
+                                <Text text="{discount1}" />
+                                <Text text="{discount2}" />
+                                <ObjectNumber number="{rateAfterDisA}" unit="INR" />
+                                <ObjectNumber number="{rateAfterDisB}" unit="INR" />
+                                <ObjectNumber number="{valueAfterDisB}" unit="INR" />
+                                <Text text="{gstPercent}" />
+                                <ObjectNumber number="{gstValue}" unit="INR" />
+                                <ObjectNumber number="{total}" unit="INR" />
                             </cells>
                         </ColumnListItem>
                     </items>
