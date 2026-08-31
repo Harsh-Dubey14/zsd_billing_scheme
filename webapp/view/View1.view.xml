@@ -18,6 +18,8 @@
                         <MultiInput id="deliveryInput"
                             width="100%"
                             placeholder="Enter a delivery number and press Enter (comma/space separated for multiple)"
+                            showValueHelp="true"
+                            valueHelpRequest=".onDeliveryValueHelpRequest"
                             submit=".onDeliverySubmit"
                             tokenUpdate=".onDeliveryTokenUpdate" />
 

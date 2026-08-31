@@ -1,0 +1,37 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <TableSelectDialog
+        id="deliveryValueHelpDialog"
+        title="Select Delivery Document(s)"
+        noDataText="No delivery documents found."
+        multiSelect="true"
+        growing="true"
+        growingScrollToLoad="true"
+        items="{path: 'deliveryService>/delivery_vh'}"
+        search=".onDeliveryValueHelpSearch"
+        confirm=".onDeliveryValueHelpConfirm"
+        cancel=".onDeliveryValueHelpCancel">
+
+        <columns>
+            <Column><Text text="Delivery Document" /></Column>
+            <Column><Text text="Plant" /></Column>
+            <Column><Text text="Plant Name" /></Column>
+            <Column><Text text="Customer" /></Column>
+            <Column><Text text="Customer Name" /></Column>
+        </columns>
+
+        <items>
+            <ColumnListItem type="Active">
+                <cells>
+                    <Text text="{path: 'deliveryService>DeliveryDocument', formatter: '.formatDeliveryDocument'}" />
+                    <Text text="{deliveryService>Plant}" />
+                    <Text text="{deliveryService>PlantName}" />
+                    <Text text="{deliveryService>Customer}" />
+                    <Text text="{deliveryService>FullName}" />
+                </cells>
+            </ColumnListItem>
+        </items>
+    </TableSelectDialog>
+</core:FragmentDefinition>

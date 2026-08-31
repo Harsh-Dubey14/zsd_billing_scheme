@@ -193,6 +193,75 @@ sap.ui.define([
         },
 
         // ---------------------------------------------------------------
+        // Delivery number F4 value help
+        // ---------------------------------------------------------------
+
+        onDeliveryValueHelpRequest() {
+            var oView = this.getView();
+
+            if (!this._pDeliveryValueHelpDialog) {
+                this._pDeliveryValueHelpDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "com.zeel.billingscheme.billingscheme.fragment.DeliveryValueHelpDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    return oDialog;
+                });
+            }
+
+            this._pDeliveryValueHelpDialog.then(function (oDialog) {
+                oDialog.open();
+            });
+        },
+
+        onDeliveryValueHelpSearch(oEvent) {
+            var sQuery = oEvent.getParameter("value") || "";
+            var oBinding = oEvent.getSource().getBinding("items");
+
+            oBinding.filter(sQuery ? [
+                new Filter({
+                    filters: [
+                        new Filter("DeliveryDocument", FilterOperator.Contains, sQuery),
+                        new Filter("FullName", FilterOperator.Contains, sQuery),
+                        new Filter("Customer", FilterOperator.Contains, sQuery)
+                    ],
+                    and: false
+                })
+            ] : []);
+        },
+
+        onDeliveryValueHelpConfirm(oEvent) {
+            var aSelectedContexts = oEvent.getParameter("selectedContexts") || [];
+
+            if (!aSelectedContexts.length) {
+                return;
+            }
+
+            var aValues = aSelectedContexts.map(function (oContext) {
+                return String(oContext.getObject().DeliveryDocument || "").padStart(10, "0");
+            });
+
+            var iAdded = this._addDeliveryNumbers(aValues);
+
+            this._syncDeliveryState();
+
+            MessageToast.show(iAdded + " delivery number(s) added.");
+        },
+
+        onDeliveryValueHelpCancel(oEvent) {
+            var oBinding = oEvent.getSource().getBinding("items");
+
+            if (oBinding) {
+                oBinding.filter([]);
+            }
+        },
+
+        formatDeliveryDocument(sValue) {
+            return String(sValue || "").padStart(10, "0");
+        },
+
+        // ---------------------------------------------------------------
         // Excel / text upload
         // ---------------------------------------------------------------
 
