@@ -18,7 +18,7 @@
     },
     "dataSources": {
       "mainService": {
-        "uri": "/sap/opu/odata4/sap/zsb_billing_scheme/srvd/sap/zsd_billing_scheme/0001/",
+        "uri": "/sap/opu/odata4/sap/zsb_get_delv/srvd/sap/zsd_delivery_api/0001/",
         "type": "OData",
         "settings": {
           "annotations": [],
@@ -66,6 +66,10 @@
   },
   "sap.ui5": {
     "flexEnabled": false,
+     "fullWidth": true,
+    "config": {
+      "fullWidth": true
+    },
     "dependencies": {
       "minUI5Version": "1.142.12",
       "libs": {

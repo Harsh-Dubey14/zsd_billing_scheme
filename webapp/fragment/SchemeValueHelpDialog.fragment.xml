@@ -26,7 +26,7 @@
                     <Text text="{schemes>SchemeType}" />
                     <Text text="{schemes>Discount1}" />
                     <Text text="{schemes>Discount2}" />
-                    <ObjectNumber number="{schemes>AdvAmount}" unit="INR" />
+                    <ObjectNumber number="{schemes>AdvAmount}" unit="{schemes>Currency}" />
                 </cells>
             </ColumnListItem>
         </items>

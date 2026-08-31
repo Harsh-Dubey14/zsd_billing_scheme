@@ -20,8 +20,8 @@ builder:
           authenticationType: reentranceTicket # SAML support for vscode
         app:
           name: ZBILLINGSCHEME
-          package: ZBILLING_SCHEME
-          transport: EGFK901941
+          package: ZSCHEME_PROPOSAL
+          transport: EGFK902955
         exclude:
           - /test/
           - /localService/

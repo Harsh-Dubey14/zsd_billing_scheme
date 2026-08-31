@@ -8,9 +8,13 @@ sap.ui.define([
     "sap/m/Token",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
-    "com/zeel/billingscheme/billingscheme/model/MockData"
-], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, MockData) => {
+    "sap/m/GroupHeaderListItem"
+], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem) => {
     "use strict";
+
+    // Standard GST rate applied to every line until a scheme/product-specific
+    // rate is required.
+    var GST_RATE_PERCENT = 5;
 
     return Controller.extend("com.zeel.billingscheme.billingscheme.controller.View1", {
 
@@ -26,6 +30,8 @@ sap.ui.define([
                 hasSchemeDetails: false,
                 billingItems: []
             }));
+
+            this._mDeliveryGroupInfo = {};
 
             this._attachDeliveryPasteHandler();
         },
@@ -122,6 +128,7 @@ sap.ui.define([
             oModel.setProperty("/itemCount", 0);
             oModel.setProperty("/deliveryCount", 0);
             oModel.setProperty("/schemeDetails", null);
+            this._mDeliveryGroupInfo = {};
             oModel.setProperty("/schemeSelectedText", "");
             oModel.setProperty("/schemeSummaryText", "");
             oModel.setProperty("/hasSchemeDetails", false);
@@ -359,21 +366,38 @@ sap.ui.define([
 
         _buildItemsFromDeliveryRows(aRawRows) {
             var mGroupCounts = {};
+            var mGroupInfo = {};
 
             (aRawRows || []).forEach(function (oRow) {
-                var sDeliveryNumber = String(oRow.DeliveryDocument || "");
+                // Backend responses can drop leading zeros from
+                // DeliveryDocument (e.g. "80000275"), but the backend's own
+                // scheme-billing logic keys off the full 10-digit document
+                // number - pad it back out before using it anywhere else.
+                var sDeliveryNumber = String(oRow.DeliveryDocument || "").padStart(10, "0");
 
                 mGroupCounts[sDeliveryNumber] = (mGroupCounts[sDeliveryNumber] || 0) + 1;
+
+                if (!mGroupInfo[sDeliveryNumber]) {
+                    mGroupInfo[sDeliveryNumber] = {
+                        customerId: oRow.Customer || "",
+                        customerName: oRow.customerName || "",
+                        customerAddress: oRow.Address || ""
+                    };
+                }
             });
 
+            Object.keys(mGroupCounts).forEach(function (sDeliveryNumber) {
+                mGroupInfo[sDeliveryNumber].itemCount = mGroupCounts[sDeliveryNumber];
+            });
+
+            this._mDeliveryGroupInfo = mGroupInfo;
+
             var aItems = (aRawRows || []).map(function (oRow) {
-                var sDeliveryNumber = String(oRow.DeliveryDocument || "");
-                var iCount = mGroupCounts[sDeliveryNumber] || 1;
+                var sDeliveryNumber = String(oRow.DeliveryDocument || "").padStart(10, "0");
 
                 return {
                     deliveryNumber: sDeliveryNumber,
                     deliveryDocumentItem: String(oRow.DeliveryDocumentItem || ""),
-                    groupLabel: "Delivery " + sDeliveryNumber + " (" + iCount + " item" + (iCount > 1 ? "s" : "") + ")",
                     product: oRow.Product || "",
                     color: oRow.Color || "",
                     size: oRow.ZSize || "",
@@ -383,7 +407,10 @@ sap.ui.define([
                     pack: Number(oRow.NumberOfPacks) || 0,
                     qty: Number(oRow.Quantity) || 0,
                     unit: oRow.BaseUnit || "",
-                    rate: Number(oRow.Rate) || 0
+                    rate: Number(oRow.Rate) || 0,
+                    customerId: oRow.Customer || "",
+                    customerName: oRow.customerName || "",
+                    customerAddress: oRow.Address || ""
                 };
             });
 
@@ -402,6 +429,27 @@ sap.ui.define([
             return aItems;
         },
 
+        getDeliveryGroupHeader(oGroup) {
+            var sDeliveryNumber = oGroup.key;
+            var oInfo = (this._mDeliveryGroupInfo && this._mDeliveryGroupInfo[sDeliveryNumber]) || {};
+            var sCount = oInfo.itemCount ? oInfo.itemCount + " item" + (oInfo.itemCount > 1 ? "s" : "") : "";
+            var sTitle = "Delivery " + sDeliveryNumber + (sCount ? " (" + sCount + ")" : "");
+
+            if (oInfo.customerName) {
+                sTitle += "  •  " + oInfo.customerName;
+            }
+
+            if (oInfo.customerAddress) {
+                sTitle += "  •  " + oInfo.customerAddress;
+            }
+
+            return new GroupHeaderListItem({
+                title: sTitle,
+                tooltip: oInfo.customerAddress || undefined,
+                upperCase: false
+            });
+        },
+
         // ---------------------------------------------------------------
         // Scheme selection
         // ---------------------------------------------------------------
@@ -416,13 +464,73 @@ sap.ui.define([
                     controller: this
                 }).then(function (oDialog) {
                     oView.addDependent(oDialog);
-                    oDialog.setModel(new JSONModel(MockData.getSchemes()), "schemes");
+                    oDialog.setModel(new JSONModel([]), "schemes");
                     return oDialog;
                 });
             }
 
             this._pSchemeValueHelpDialog.then(function (oDialog) {
                 oDialog.open();
+                oDialog.setBusy(true);
+
+                this._readSchemes()
+                    .then(function (aSchemes) {
+                        oDialog.getModel("schemes").setData(aSchemes);
+                    })
+                    .catch(function (oError) {
+                        MessageBox.error("Could not fetch schemes: " + (oError && oError.message ? oError.message : oError));
+                    })
+                    .finally(function () {
+                        oDialog.setBusy(false);
+                    });
+            }.bind(this));
+        },
+
+        _readSchemes() {
+            // The backend's Scheme entity set fans out one row per Customer
+            // for the same underlying document (its declared OData key is
+            // just AccountingDocument/AccountingDocumentItem/PostingDate),
+            // so two customers sharing a scheme produce duplicate key
+            // predicates. Reading it via bindList()/requestContexts() makes
+            // the OData v4 model build a keyed cache and throw "Duplicate
+            // key predicate" on those rows. We only need the scheme
+            // definition (not a live-bound entity), so read the raw JSON
+            // directly instead and de-duplicate on the client.
+            var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
+
+            return fetch(sServiceUri + "Scheme", {
+                headers: { "Accept": "application/json" }
+            }).then(function (oResponse) {
+                if (!oResponse.ok) {
+                    throw new Error("HTTP " + oResponse.status);
+                }
+                return oResponse.json();
+            }).then(function (oData) {
+                var aRows = (oData && oData.value) || [];
+                var mSeen = {};
+                var aSchemes = [];
+
+                aRows.forEach(function (oRow) {
+                    var sDedupeKey = [oRow.SchemeName, oRow.scheme_type, oRow.DiscountA, oRow.DiscountB, oRow.Amount].join("|");
+
+                    if (mSeen[sDedupeKey]) {
+                        return;
+                    }
+                    mSeen[sDedupeKey] = true;
+
+                    aSchemes.push({
+                        AccountingDocument: oRow.AccountingDocument,
+                        AccountingDocumentItem: oRow.AccountingDocumentItem,
+                        SchemeName: oRow.SchemeName,
+                        SchemeType: oRow.scheme_type,
+                        Discount1: oRow.DiscountA + "%",
+                        Discount2: oRow.DiscountB + "%",
+                        AdvAmount: oRow.Amount,
+                        Currency: oRow.CompanyCodeCurrency
+                    });
+                });
+
+                return aSchemes;
             });
         },
 
@@ -481,8 +589,12 @@ sap.ui.define([
 
         // ---------------------------------------------------------------
         // Billing details (Scheme Name/Type/Dis 1/Dis 2 come from the
-        // selected scheme; the remaining calculated columns are placeholders
-        // until the calculation formulas are provided.
+        // selected scheme; the remaining columns are calculated per line:
+        //   Rate After Dis A = Rate - (Rate * Dis1)
+        //   Rate After Dis B = Rate After Dis A - (Rate After Dis A * Dis2)
+        //   Value after Dis B = Rate After Dis B * Qty
+        //   GST Value = Value after Dis B * GST%
+        //   Total = Value after Dis B + GST Value
         // ---------------------------------------------------------------
 
         _rebuildBillingItems() {
@@ -495,7 +607,19 @@ sap.ui.define([
                 return;
             }
 
+            var fDisc1 = this._parsePercent(oScheme.Discount1);
+            var fDisc2 = this._parsePercent(oScheme.Discount2);
+
             var aBillingItems = aItems.map(function (oItem) {
+                var fRate = oItem.rate || 0;
+                var fQty = oItem.qty || 0;
+
+                var fRateAfterDisA = this._round2(fRate - (fRate * fDisc1));
+                var fRateAfterDisB = this._round2(fRateAfterDisA - (fRateAfterDisA * fDisc2));
+                var fValueAfterDisB = this._round2(fRateAfterDisB * fQty);
+                var fGstValue = this._round2(fValueAfterDisB * (GST_RATE_PERCENT / 100));
+                var fTotal = this._round2(fValueAfterDisB + fGstValue);
+
                 return {
                     srNo: oItem.srNo,
                     qty: oItem.qty,
@@ -505,16 +629,180 @@ sap.ui.define([
                     schemeType: oScheme.SchemeType,
                     discount1: oScheme.Discount1,
                     discount2: oScheme.Discount2,
-                    rateAfterDisA: 0,
-                    rateAfterDisB: 0,
-                    valueAfterDisB: 0,
-                    gstPercent: 0,
-                    gstValue: 0,
-                    total: 0
+                    rateAfterDisA: fRateAfterDisA,
+                    rateAfterDisB: fRateAfterDisB,
+                    valueAfterDisB: fValueAfterDisB,
+                    gstPercent: GST_RATE_PERCENT + "%",
+                    gstValue: fGstValue,
+                    total: fTotal
+                };
+            }.bind(this));
+
+            oModel.setProperty("/billingItems", aBillingItems);
+        },
+
+        _parsePercent(sValue) {
+            var fValue = parseFloat(String(sValue || "0").replace("%", ""));
+
+            return isNaN(fValue) ? 0 : fValue / 100;
+        },
+
+        _round2(fValue) {
+            return Math.round((fValue + Number.EPSILON) * 100) / 100;
+        },
+
+        _parseAmount(sValue) {
+            var fValue = parseFloat(String(sValue || "0").replace(/,/g, ""));
+
+            return isNaN(fValue) ? 0 : fValue;
+        },
+
+        _formatDate(oDate) {
+            var sYear = oDate.getFullYear();
+            var sMonth = String(oDate.getMonth() + 1).padStart(2, "0");
+            var sDay = String(oDate.getDate()).padStart(2, "0");
+
+            return sYear + "-" + sMonth + "-" + sDay;
+        },
+
+        // ---------------------------------------------------------------
+        // Post scheme billing
+        // ---------------------------------------------------------------
+
+        onPostScheme() {
+            var oModel = this.getView().getModel();
+            var aBillingItems = oModel.getProperty("/billingItems") || [];
+
+            if (!aBillingItems.length) {
+                MessageToast.show("Fetch delivery items and select a scheme before posting.");
+                return;
+            }
+
+            var oPayload = this._buildSchemeBillingPayload();
+
+            BusyIndicator.show(0);
+
+            this._postSchemeBilling(oPayload)
+                .then(function () {
+                    BusyIndicator.hide();
+                    MessageBox.success("Scheme billing posted successfully.", {
+                        title: "Success"
+                    });
+                })
+                .catch(function (oError) {
+                    BusyIndicator.hide();
+                    MessageBox.error("Could not post scheme billing: " + (oError && oError.message ? oError.message : oError));
+                });
+        },
+
+        _buildSchemeBillingPayload() {
+            var oModel = this.getView().getModel();
+            var aItems = oModel.getProperty("/items") || [];
+            var aBillingItems = oModel.getProperty("/billingItems") || [];
+            var oScheme = oModel.getProperty("/schemeDetails") || {};
+
+            var aDeliveries = [];
+            var mSeenDeliveries = {};
+
+            aItems.forEach(function (oItem) {
+                if (!mSeenDeliveries[oItem.deliveryNumber]) {
+                    mSeenDeliveries[oItem.deliveryNumber] = true;
+                    aDeliveries.push({ DeliveryDocument: oItem.deliveryNumber });
+                }
+            });
+
+            var sSchemeType = String(oScheme.SchemeType || "").toUpperCase();
+            var fDiscount1 = this._parsePercent(oScheme.Discount1) * 100;
+            var fDiscount2 = this._parsePercent(oScheme.Discount2) * 100;
+            var fAdvanceAmount = this._parseAmount(oScheme.AdvAmount);
+
+            var fInvoiceTotal = this._round2(aBillingItems.reduce(function (fSum, oBillingItem) {
+                return fSum + (oBillingItem.total || 0);
+            }, 0));
+
+            var aPostItems = aItems.map(function (oItem, iIndex) {
+                var oBillingItem = aBillingItems[iIndex] || {};
+
+                return {
+                    DeliveryDocument: oItem.deliveryNumber,
+                    DeliveryDocumentItem: oItem.deliveryDocumentItem,
+                    Product: oItem.product,
+                    Color: oItem.color,
+                    SizeName: oItem.size,
+                    Brand: oItem.brand,
+                    HSNCode: oItem.hsnCode,
+                    Bag: oItem.bag,
+                    Pack: oItem.pack,
+                    Quantity: oItem.qty,
+                    Unit: oItem.unit,
+                    Rate: oItem.rate,
+                    SchemeName: oScheme.SchemeName,
+                    SchemeType: sSchemeType,
+                    Discount1: fDiscount1,
+                    Discount2: fDiscount2,
+                    RateAfterDiscount1: oBillingItem.rateAfterDisA,
+                    RateAfterDiscount2: oBillingItem.rateAfterDisB,
+                    TaxableAmount: oBillingItem.valueAfterDisB,
+                    GSTPercent: GST_RATE_PERCENT,
+                    GSTAmount: oBillingItem.gstValue,
+                    TotalAmount: oBillingItem.total,
+                    Currency: "INR"
                 };
             });
 
-            oModel.setProperty("/billingItems", aBillingItems);
+            return {
+                SchemeName: oScheme.SchemeName,
+                SchemeType: sSchemeType,
+                BillingDate: this._formatDate(new Date()),
+                Discount1: fDiscount1,
+                Discount2: fDiscount2,
+                AdvanceAmount: fAdvanceAmount,
+                InvoiceTotal: fInvoiceTotal,
+                AdvanceBalance: fAdvanceAmount,
+                Currency: "INR",
+                _Deliveries: aDeliveries,
+                _Items: aPostItems
+            };
+        },
+
+        _postSchemeBilling(oPayload) {
+            // This action expects the payload as the raw request body, not
+            // wrapped under a named OData action parameter - so the OData v4
+            // model's operation-binding API (bindContext/setParameter, which
+            // always wraps parameters per protocol) can't send it correctly.
+            // A plain POST is used instead; SAP Gateway still enforces CSRF
+            // on it, so a token is fetched first.
+            var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
+            var sActionUrl = sServiceUri + "SchemeBilling/com.sap.gateway.srvd.zsd_delivery_api.v0001.PostSchemeBilling";
+
+            return this._fetchCsrfToken(sServiceUri).then(function (sToken) {
+                return fetch(sActionUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRF-Token": sToken
+                    },
+                    body: JSON.stringify(oPayload)
+                });
+            }).then(function (oResponse) {
+                if (!oResponse.ok) {
+                    return oResponse.text().then(function (sText) {
+                        throw new Error("HTTP " + oResponse.status + (sText ? ": " + sText : ""));
+                    });
+                }
+
+                return oResponse.status === 204 ? null : oResponse.json();
+            });
+        },
+
+        _fetchCsrfToken(sServiceUri) {
+            return fetch(sServiceUri + "$metadata", {
+                method: "GET",
+                headers: { "X-CSRF-Token": "Fetch" }
+            }).then(function (oResponse) {
+                return oResponse.headers.get("X-CSRF-Token") || "";
+            });
         }
     });
 });

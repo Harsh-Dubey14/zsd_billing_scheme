@@ -51,7 +51,7 @@
             <!-- Delivery Items -->
             <Panel headerText="Delivery Items" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
                 <Table id="itemsTable"
-                    items="{path: '/items', sorter: {path: 'groupLabel', group: true}}"
+                    items="{path: '/items', sorter: {path: 'deliveryNumber', group: true}, groupHeaderFactory: '.getDeliveryGroupHeader'}"
                     noDataText="No delivery items yet. Enter delivery number(s) above and choose &quot;Get Delivery Items&quot;."
                     sticky="ColumnHeaders,HeaderToolbar,GroupHeaders"
                     growing="true"
@@ -144,6 +144,11 @@
                         </ColumnListItem>
                     </items>
                 </Table>
+
+                <HBox class="sapUiSmallMargin" wrap="Wrap" alignItems="Center">
+                    <ToolbarSpacer />
+                    <Button text="Post" icon="sap-icon://accept" type="Emphasized" press=".onPostScheme" enabled="{= ${/billingItems}.length > 0 }" />
+                </HBox>
             </Panel>
 
         </content>
