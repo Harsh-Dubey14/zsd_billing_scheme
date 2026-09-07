@@ -12,8 +12,10 @@
         cancel=".onSchemeValueHelpCancel">
 
         <columns>
+            <Column><Text text="Accounting Document" /></Column>
             <Column><Text text="Scheme Name" /></Column>
             <Column><Text text="Scheme Type" /></Column>
+            <Column><Text text="Customer Name" /></Column>
             <Column hAlign="End"><Text text="Discount 1" /></Column>
             <Column hAlign="End"><Text text="Discount 2" /></Column>
             <Column hAlign="End"><Text text="Advance Amount" /></Column>
@@ -22,8 +24,10 @@
         <items>
             <ColumnListItem type="Active">
                 <cells>
+                    <Text text="{schemes>AccountingDocument}" />
                     <Text text="{schemes>SchemeName}" />
                     <Text text="{schemes>SchemeType}" />
+                    <Text text="{schemes>CustomerName}" />
                     <Text text="{schemes>Discount1}" />
                     <Text text="{schemes>Discount2}" />
                     <ObjectNumber number="{schemes>AdvAmount}" unit="{schemes>Currency}" />

@@ -28,10 +28,14 @@ sap.ui.define([
                 schemeSelectedText: "",
                 schemeSummaryText: "",
                 hasSchemeDetails: false,
-                billingItems: []
+                billingItems: [],
+                billingTotal: 0,
+                schemeValid: true,
+                schemeErrorText: ""
             }));
 
             this._mDeliveryGroupInfo = {};
+            this._sDeliveryValueHelpAnchorFullName = null;
 
             this._attachDeliveryPasteHandler();
         },
@@ -133,6 +137,9 @@ sap.ui.define([
             oModel.setProperty("/schemeSummaryText", "");
             oModel.setProperty("/hasSchemeDetails", false);
             oModel.setProperty("/billingItems", []);
+            oModel.setProperty("/billingTotal", 0);
+            oModel.setProperty("/schemeValid", true);
+            oModel.setProperty("/schemeErrorText", "");
 
             this._syncDeliveryState();
             MessageToast.show("Cleared.");
@@ -206,13 +213,97 @@ sap.ui.define([
                     controller: this
                 }).then(function (oDialog) {
                     oView.addDependent(oDialog);
+                    this._attachDeliverySelectionGuard(oDialog);
                     return oDialog;
-                });
+                }.bind(this));
             }
 
             this._pDeliveryValueHelpDialog.then(function (oDialog) {
+                this._sDeliveryValueHelpAnchorFullName = null;
                 oDialog.open();
+            }.bind(this));
+        },
+
+        // TableSelectDialog doesn't expose its multi-select checkbox toggles
+        // as a public event, so this reaches into its internal list (a plain
+        // sap.m.Table, exposed as `_oList` since the control's introduction)
+        // to enforce "one customer's deliveries at a time": the first row
+        // checked fixes the customer (by FullName) for the rest of this
+        // dialog session - any row belonging to a different customer is
+        // immediately unchecked again, and the customer resets once every
+        // row is deselected.
+        _attachDeliverySelectionGuard(oDialog) {
+            var oList = oDialog._oList;
+
+            if (!oList) {
+                return;
+            }
+
+            oList.attachSelectionChange(function (oEvent) {
+                if (oEvent.getParameter("selectAll")) {
+                    this._enforceDeliverySelectionGuard(oList);
+                    return;
+                }
+
+                var oListItem = oEvent.getParameter("listItem");
+                var bSelected = oEvent.getParameter("selected");
+
+                if (!oListItem || !bSelected) {
+                    if (!oList.getSelectedItems().length) {
+                        this._sDeliveryValueHelpAnchorFullName = null;
+                    }
+                    return;
+                }
+
+                var sFullName = oListItem.getBindingContext("deliveryService").getObject().FullName || "";
+
+                if (this._sDeliveryValueHelpAnchorFullName === null) {
+                    this._sDeliveryValueHelpAnchorFullName = sFullName;
+                    return;
+                }
+
+                if (sFullName !== this._sDeliveryValueHelpAnchorFullName) {
+                    oList.setSelectedItem(oListItem, false);
+                    MessageToast.show(this._getDeliverySelectionGuardMessage());
+                }
+            }, this);
+        },
+
+        _enforceDeliverySelectionGuard(oList) {
+            var aSelected = oList.getSelectedItems();
+
+            if (!aSelected.length) {
+                this._sDeliveryValueHelpAnchorFullName = null;
+                return;
+            }
+
+            var sAnchor = this._sDeliveryValueHelpAnchorFullName;
+
+            if (sAnchor === null) {
+                sAnchor = aSelected[0].getBindingContext("deliveryService").getObject().FullName || "";
+                this._sDeliveryValueHelpAnchorFullName = sAnchor;
+            }
+
+            var iRemoved = 0;
+
+            aSelected.forEach(function (oListItem) {
+                var sFullName = oListItem.getBindingContext("deliveryService").getObject().FullName || "";
+
+                if (sFullName !== sAnchor) {
+                    oList.setSelectedItem(oListItem, false);
+                    iRemoved++;
+                }
             });
+
+            if (iRemoved) {
+                MessageToast.show(this._getDeliverySelectionGuardMessage());
+            }
+        },
+
+        _getDeliverySelectionGuardMessage() {
+            return "Only delivery numbers for the same customer can be selected together" +
+                (this._sDeliveryValueHelpAnchorFullName ? " (" + this._sDeliveryValueHelpAnchorFullName + ")" : "") +
+                ". Deselect all to pick a different customer.";
         },
 
         onDeliveryValueHelpSearch(oEvent) {
@@ -234,12 +325,31 @@ sap.ui.define([
         onDeliveryValueHelpConfirm(oEvent) {
             var aSelectedContexts = oEvent.getParameter("selectedContexts") || [];
 
+            this._sDeliveryValueHelpAnchorFullName = null;
+
             if (!aSelectedContexts.length) {
                 return;
             }
 
-            var aValues = aSelectedContexts.map(function (oContext) {
-                return String(oContext.getObject().DeliveryDocument || "").padStart(10, "0");
+            var aRows = aSelectedContexts.map(function (oContext) {
+                return oContext.getObject();
+            });
+
+            // Safety net in case the live selection guard couldn't attach
+            // (e.g. a future UI5 version drops the internal `_oList`) -
+            // still refuse a mixed-customer selection at confirm time.
+            var sFullName = aRows[0].FullName || "";
+            var bMixedCustomers = aRows.some(function (oRow) {
+                return (oRow.FullName || "") !== sFullName;
+            });
+
+            if (bMixedCustomers) {
+                MessageBox.error("Selected delivery numbers belong to different customers. Please select delivery numbers for a single customer only.");
+                return;
+            }
+
+            var aValues = aRows.map(function (oRow) {
+                return String(oRow.DeliveryDocument || "").padStart(10, "0");
             });
 
             var iAdded = this._addDeliveryNumbers(aValues);
@@ -251,6 +361,8 @@ sap.ui.define([
 
         onDeliveryValueHelpCancel(oEvent) {
             var oBinding = oEvent.getSource().getBinding("items");
+
+            this._sDeliveryValueHelpAnchorFullName = null;
 
             if (oBinding) {
                 oBinding.filter([]);
@@ -415,19 +527,29 @@ sap.ui.define([
         },
 
         _readDeliveryItems(aDeliveryNumbers) {
-            var oODataModel = this.getOwnerComponent().getModel("deliveryService");
+            // ZCGET_DELV's declared OData key is just DeliveryDocument, but
+            // the backend returns one row per line item - a delivery with
+            // several items produces multiple rows sharing that same key,
+            // so bindList()/requestContexts() throws "Duplicate key
+            // predicate" the same way the Scheme entity did. Read the raw
+            // JSON directly instead.
+            var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
 
-            var aFilters = aDeliveryNumbers.map(function (sDeliveryNumber) {
-                return new Filter("DeliveryDocument", FilterOperator.EQ, sDeliveryNumber);
-            });
-            var oCombinedFilter = new Filter({ filters: aFilters, and: false });
+            var sFilter = aDeliveryNumbers.map(function (sDeliveryNumber) {
+                return "DeliveryDocument eq '" + sDeliveryNumber.replace(/'/g, "''") + "'";
+            }).join(" or ");
 
-            var oListBinding = oODataModel.bindList("/ZCGET_DELV", undefined, [], oCombinedFilter);
+            var sUrl = sServiceUri + "ZCGET_DELV?$filter=" + encodeURIComponent(sFilter);
 
-            return oListBinding.requestContexts(0, 5000).then(function (aContexts) {
-                var aRawRows = aContexts.map(function (oContext) {
-                    return oContext.getObject();
-                });
+            return fetch(sUrl, {
+                headers: { "Accept": "application/json" }
+            }).then(function (oResponse) {
+                if (!oResponse.ok) {
+                    throw new Error("HTTP " + oResponse.status);
+                }
+                return oResponse.json();
+            }).then(function (oData) {
+                var aRawRows = (oData && oData.value) || [];
 
                 return this._buildItemsFromDeliveryRows(aRawRows);
             }.bind(this));
@@ -525,6 +647,12 @@ sap.ui.define([
 
         onSchemeValueHelpRequest() {
             var oView = this.getView();
+            var sCustomerId = this._getSelectedCustomerId();
+
+            if (!sCustomerId) {
+                MessageToast.show("Please fetch delivery items first to determine the customer.");
+                return;
+            }
 
             if (!this._pSchemeValueHelpDialog) {
                 this._pSchemeValueHelpDialog = Fragment.load({
@@ -542,7 +670,7 @@ sap.ui.define([
                 oDialog.open();
                 oDialog.setBusy(true);
 
-                this._readSchemes()
+                this._readSchemes(sCustomerId)
                     .then(function (aSchemes) {
                         oDialog.getModel("schemes").setData(aSchemes);
                     })
@@ -555,7 +683,7 @@ sap.ui.define([
             }.bind(this));
         },
 
-        _readSchemes() {
+        _readSchemes(sCustomerId) {
             // The backend's Scheme entity set fans out one row per Customer
             // for the same underlying document (its declared OData key is
             // just AccountingDocument/AccountingDocumentItem/PostingDate),
@@ -564,10 +692,16 @@ sap.ui.define([
             // the OData v4 model build a keyed cache and throw "Duplicate
             // key predicate" on those rows. We only need the scheme
             // definition (not a live-bound entity), so read the raw JSON
-            // directly instead and de-duplicate on the client.
+            // directly instead and de-duplicate on the client - keyed by
+            // document/item/customer so distinct customers on the same
+            // document each keep their own row (needed now that both are
+            // shown as columns).
             var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
 
-            return fetch(sServiceUri + "Scheme", {
+            var sFilter = sCustomerId ? "?$filter=Customer eq '" + String(sCustomerId).replace(/'/g, "''") + "'" : "";
+            var sUrl = sServiceUri + "Scheme" + sFilter;
+
+            return fetch(sUrl, {
                 headers: { "Accept": "application/json" }
             }).then(function (oResponse) {
                 if (!oResponse.ok) {
@@ -580,7 +714,7 @@ sap.ui.define([
                 var aSchemes = [];
 
                 aRows.forEach(function (oRow) {
-                    var sDedupeKey = [oRow.SchemeName, oRow.scheme_type, oRow.DiscountA, oRow.DiscountB, oRow.Amount].join("|");
+                    var sDedupeKey = [oRow.AccountingDocument, oRow.AccountingDocumentItem, oRow.Customer].join("|");
 
                     if (mSeen[sDedupeKey]) {
                         return;
@@ -595,7 +729,10 @@ sap.ui.define([
                         Discount1: oRow.DiscountA + "%",
                         Discount2: oRow.DiscountB + "%",
                         AdvAmount: oRow.Amount,
-                        Currency: oRow.CompanyCodeCurrency
+                        Currency: oRow.CompanyCodeCurrency,
+                        // Not yet in the API response - defaults to blank
+                        // until the backend adds it.
+                        CustomerName: oRow.customerName || ""
                     });
                 });
 
@@ -611,7 +748,9 @@ sap.ui.define([
                 new Filter({
                     filters: [
                         new Filter("SchemeName", FilterOperator.Contains, sQuery),
-                        new Filter("SchemeType", FilterOperator.Contains, sQuery)
+                        new Filter("SchemeType", FilterOperator.Contains, sQuery),
+                        new Filter("AccountingDocument", FilterOperator.Contains, sQuery),
+                        new Filter("CustomerName", FilterOperator.Contains, sQuery)
                     ],
                     and: false
                 })
@@ -646,6 +785,14 @@ sap.ui.define([
             }
         },
 
+        _getSelectedCustomerId() {
+            if (!this._mDeliveryGroupInfo || !Object.keys(this._mDeliveryGroupInfo).length) {
+                return null;
+            }
+            var aDeliveryKeys = Object.keys(this._mDeliveryGroupInfo);
+            return this._mDeliveryGroupInfo[aDeliveryKeys[0]].customerId || null;
+        },
+
         _formatSchemeSummary(oSchemeDetails) {
             oSchemeDetails = oSchemeDetails || {};
 
@@ -673,6 +820,9 @@ sap.ui.define([
 
             if (!aItems.length || !oScheme) {
                 oModel.setProperty("/billingItems", []);
+                oModel.setProperty("/billingTotal", 0);
+                oModel.setProperty("/schemeValid", true);
+                oModel.setProperty("/schemeErrorText", "");
                 return;
             }
 
@@ -707,7 +857,40 @@ sap.ui.define([
                 };
             }.bind(this));
 
+            var fBillingTotal = this._round2(aBillingItems.reduce(function (fSum, oBillingItem) {
+                return fSum + (oBillingItem.total || 0);
+            }, 0));
+
             oModel.setProperty("/billingItems", aBillingItems);
+            oModel.setProperty("/billingTotal", fBillingTotal);
+
+            this._validateSchemeAmount(oScheme, fBillingTotal);
+        },
+
+        // The Post button stays disabled (via /schemeValid) whenever the
+        // billing total exceeds the selected scheme's advance amount -
+        // the user has to pick a different scheme (which re-runs this
+        // check) before they can post.
+        _validateSchemeAmount(oScheme, fBillingTotal) {
+            var oModel = this.getView().getModel();
+            var fAdvAmount = this._parseAmount(oScheme.AdvAmount);
+
+            if (fBillingTotal > fAdvAmount) {
+                oModel.setProperty("/schemeValid", false);
+                oModel.setProperty("/schemeErrorText",
+                    "Total bill (" + this._formatAmount(fBillingTotal) + ") exceeds the selected scheme's advance amount (" +
+                    this._formatAmount(fAdvAmount) + "). Please select a different scheme.");
+
+                MessageBox.error(
+                    "Can't select this scheme - total bill is " + this._formatAmount(fBillingTotal) +
+                    " and the selected scheme's advance amount is " + this._formatAmount(fAdvAmount) +
+                    ".\n\nPlease select a different scheme.",
+                    { title: "Scheme Amount Exceeded" }
+                );
+            } else {
+                oModel.setProperty("/schemeValid", true);
+                oModel.setProperty("/schemeErrorText", "");
+            }
         },
 
         _parsePercent(sValue) {
@@ -724,6 +907,10 @@ sap.ui.define([
             var fValue = parseFloat(String(sValue || "0").replace(/,/g, ""));
 
             return isNaN(fValue) ? 0 : fValue;
+        },
+
+        _formatAmount(fValue) {
+            return (fValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
 
         _formatDate(oDate) {
@@ -744,6 +931,11 @@ sap.ui.define([
 
             if (!aBillingItems.length) {
                 MessageToast.show("Fetch delivery items and select a scheme before posting.");
+                return;
+            }
+
+            if (!oModel.getProperty("/schemeValid")) {
+                MessageToast.show("The billing total exceeds the selected scheme's advance amount. Please select a different scheme.");
                 return;
             }
 

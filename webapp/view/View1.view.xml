@@ -8,26 +8,27 @@
 
             <!-- Selection Criteria -->
             <Panel headerText="Selection Criteria" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
-                <HBox wrap="Wrap" class="sapUiSmallMargin zbsSelectionRow">
+                <HBox wrap="Wrap" class="sapUiMediumMargin zbsSelectionRow">
                     <VBox class="zbsSelectionCol">
                         <layoutData>
                             <FlexItemData growFactor="1" baseSize="0%" />
                         </layoutData>
-                        <Label text="Delivery Number(s)" design="Bold" labelFor="deliveryInput" class="sapUiTinyMarginBottom" />
+                        <Label text="Delivery Number(s)" design="Bold" labelFor="deliveryInput" class="sapUiSmallMarginBottom" />
 
                         <MultiInput id="deliveryInput"
                             width="100%"
-                            placeholder="Enter a delivery number and press Enter (comma/space separated for multiple)"
+                            placeholder="Enter delivery number and press Enter"
                             showValueHelp="true"
                             valueHelpRequest=".onDeliveryValueHelpRequest"
                             submit=".onDeliverySubmit"
                             tokenUpdate=".onDeliveryTokenUpdate" />
 
-                        <HBox class="sapUiTinyMarginTop" wrap="Wrap" alignItems="Center">
-                            <Button text="Upload Document" icon="sap-icon://upload" type="Default" press=".onOpenUploadDialog" class="sapUiTinyMarginEnd sapUiTinyMarginTop" />
-                            <ToolbarSpacer />
-                            <Button text="Clear All" icon="sap-icon://clear-all" type="Transparent" press=".onClearAll" enabled="{/hasDeliveryNumbers}" class="sapUiTinyMarginEnd sapUiTinyMarginTop" />
-                            <Button text="Get Delivery Items" icon="sap-icon://action" type="Emphasized" press=".onFetchItems" enabled="{/hasDeliveryNumbers}" class="sapUiTinyMarginTop" />
+                        <HBox class="sapUiSmallMarginTop" wrap="Wrap" alignItems="Center" justifyContent="SpaceBetween">
+                            <HBox wrap="Wrap" alignItems="Center">
+                                <Button text="Upload" icon="sap-icon://upload" type="Default" press=".onOpenUploadDialog" class="sapUiTinyMarginEnd" />
+                                <Button text="Clear" icon="sap-icon://delete" type="Transparent" press=".onClearAll" enabled="{/hasDeliveryNumbers}" />
+                            </HBox>
+                            <Button text="Fetch Delivery Items" icon="sap-icon://arrow-right" type="Emphasized" press=".onFetchItems" enabled="{/hasDeliveryNumbers}" />
                         </HBox>
                     </VBox>
 
@@ -35,11 +36,10 @@
                         <layoutData>
                             <FlexItemData growFactor="1" baseSize="0%" />
                         </layoutData>
-                        <Label text="Scheme" design="Bold" labelFor="schemeInput" class="sapUiTinyMarginBottom" />
+                        <Label text="Scheme" design="Bold" labelFor="schemeInput" class="sapUiSmallMarginBottom" />
 
                         <Input id="schemeInput"
                             width="100%"
-                            editable="true"
                             showValueHelp="true"
                             valueHelpRequest=".onSchemeValueHelpRequest"
                             placeholder="Select a scheme..."
@@ -47,20 +47,20 @@
                     </VBox>
                 </HBox>
 
-                <MessageStrip text="{/schemeSummaryText}" type="Information" showIcon="true" visible="{/hasSchemeDetails}" class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiSmallMarginBottom" />
+                <MessageStrip text="{/schemeSummaryText}" type="Information" showIcon="true" visible="{/hasSchemeDetails}" class="sapUiMediumMarginBegin sapUiMediumMarginEnd sapUiSmallMarginBottom" />
             </Panel>
 
             <!-- Delivery Items -->
             <Panel headerText="Delivery Items" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
                 <Table id="itemsTable"
                     items="{path: '/items', sorter: {path: 'deliveryNumber', group: true}, groupHeaderFactory: '.getDeliveryGroupHeader'}"
-                    noDataText="No delivery items yet. Enter delivery number(s) above and choose &quot;Get Delivery Items&quot;."
+                    noDataText="No delivery items yet. Enter delivery number(s) and click 'Fetch Delivery Items'."
                     sticky="ColumnHeaders,HeaderToolbar,GroupHeaders"
                     growing="true"
                     growingThreshold="50"
                     autoPopinMode="true"
                     popinLayout="GridSmall"
-                    class="zbsItemsTable">
+                    class="zbsItemsTable sapUiResponsiveMargin">
                     
 
                     <columns>
@@ -101,7 +101,7 @@
             <Panel headerText="Billing Details" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
                 <Table id="billingTable"
                     items="{/billingItems}"
-                    noDataText="No billing details yet. Fetch delivery items and select a scheme above."
+                    noDataText="No billing details yet. Fetch delivery items and select a scheme."
                     sticky="ColumnHeaders,HeaderToolbar"
                     growing="true"
                     growingThreshold="50"
@@ -147,9 +147,19 @@
                     </items>
                 </Table>
 
-                <HBox class="sapUiSmallMargin" wrap="Wrap" alignItems="Center">
-                    <ToolbarSpacer />
-                    <Button text="Post" icon="sap-icon://accept" type="Emphasized" press=".onPostScheme" enabled="{= ${/billingItems}.length > 0 }" />
+                <MessageStrip text="{/schemeErrorText}" type="Error" showIcon="true" visible="{= !${/schemeValid} }" class="sapUiMediumMarginBegin sapUiMediumMarginEnd sapUiMediumMarginTop" />
+
+                <HBox class="sapUiMediumMargin" wrap="Wrap" alignItems="Center" justifyContent="End">
+                    <VBox alignItems="End">
+                        <Label text="Billing Total" design="Bold" class="sapUiTinyMarginBottom" />
+                        <ObjectNumber
+                            number="{/billingTotal}"
+                            unit="INR"
+                            emphasized="true"
+                            state="{= ${/schemeValid} ? 'None' : 'Error' }"
+                            class="sapUiLargeMarginEnd" />
+                    </VBox>
+                    <Button text="Post Scheme" icon="sap-icon://accept" type="Emphasized" press=".onPostScheme" enabled="{= ${/billingItems}.length > 0 &amp;&amp; ${/schemeValid} }" />
                 </HBox>
             </Panel>
 

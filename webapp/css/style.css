@@ -1,19 +1,262 @@
+/* ================================================================
+ *  BILLING SCHEME VISUAL REFRESH
+ *  Modern, professional design system with cohesive styling
+ * ================================================================ */
+
+:root {
+    --dispatch-accent: #0854a0;
+    --dispatch-accent-light: #e8f1fb;
+    --dispatch-success: #107e3e;
+    --dispatch-destructive: #bb0000;
+    --dispatch-shadow-subtle: 0 2px 10px rgba(8, 84, 160, 0.08);
+    --dispatch-shadow-hover: 0 6px 18px rgba(8, 84, 160, 0.12);
+}
+
+/* ================================================================
+ *  PAGE & LAYOUT
+ * ================================================================ */
+
+.zbsPage,
+.zbsPage > .sapMPageEnableScrolling {
+    background: linear-gradient(180deg, #eef2f8 0%, #f6f8fb 45%, #f6f8fb 100%);
+}
+
+.zbsPage > header.sapMPageHeader .sapMIBar {
+    background: linear-gradient(90deg, #0854a0 0%, #107e3e 150%);
+    border-bottom: none;
+    box-shadow: 0 2px 10px rgba(8, 84, 160, 0.25);
+}
+
+.zbsPage > header.sapMPageHeader .sapMTitle,
+.zbsPage > header.sapMPageHeader .sapMBtn .sapMBtnIcon {
+    color: #ffffff;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+/* ================================================================
+ *  CARD-STYLE PANELS
+ * ================================================================ */
+
 .zbsPage .sapMPanel {
+    border-radius: 14px !important;
+    overflow: hidden;
+    border: none !important;
+    box-shadow: var(--dispatch-shadow-subtle), 0 0 0 1px rgba(8, 84, 160, 0.05) !important;
+    transition: box-shadow 0.2s ease !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.zbsPage .sapMPanel:hover {
+    box-shadow: var(--dispatch-shadow-hover), 0 0 0 1px rgba(8, 84, 160, 0.06) !important;
+}
+
+/* Panel header: light accent tint + bottom accent rule */
+.zbsPage .sapMPanel > .sapMPanelHdr {
+    background: linear-gradient(90deg, var(--dispatch-accent-light) 0%, #ffffff 100%);
+    border-bottom: 2px solid var(--dispatch-accent);
+    color: var(--dispatch-accent) !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    padding: 1.25rem 1.5rem !important;
+}
+
+.zbsPage .sapMPanel > .sapMPanelContent {
+    padding: 1.5rem !important;
+    background: #ffffff;
+}
+
+.zbsPage .sapMPanelExpandBtn {
+    color: var(--dispatch-accent) !important;
+    transition: transform 0.2s ease !important;
+}
+
+.zbsPage .sapMPanelExpandBtn:hover {
+    opacity: 0.8;
+}
+
+/* ================================================================
+ *  SELECTION CRITERIA / FORM INPUTS
+ * ================================================================ */
+
+.zbsSelectionRow {
+    gap: 2rem;
     margin-bottom: 0.5rem;
 }
 
-.zbsItemsTable .sapMGHLIGroupTitle {
-    font-weight: 600;
-}
-
-.zbsSelectionRow {
-    gap: 1.5rem;
-}
-
 .zbsSelectionCol {
-    min-width: 320px;
+    min-width: 280px;
+    flex: 1;
 }
 
+.zbsSelectionCol .sapMLabel {
+    color: var(--dispatch-accent) !important;
+    font-weight: 700 !important;
+    font-size: 0.95rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.zbsSelectionCol .sapMInputBase {
+    border-radius: 8px !important;
+    border: 1px solid #d4d8dd !important;
+    background: #ffffff;
+    transition: all 0.2s ease !important;
+    min-height: 2.75rem !important;
+}
+
+.zbsSelectionCol .sapMInputBase:hover:not(.sapMInputDisabled) {
+    border-color: var(--dispatch-accent) !important;
+    box-shadow: var(--dispatch-shadow-subtle) !important;
+}
+
+.zbsSelectionCol .sapMInputBase:focus,
+.zbsSelectionCol .sapMInputBase.sapMInputFocused {
+    border-color: var(--dispatch-accent) !important;
+    box-shadow: 0 0 0 3px var(--dispatch-accent-light) !important;
+    outline: none !important;
+}
+
+/* Token styling */
+.zbsPage .sapMToken {
+    background-color: var(--dispatch-accent-light) !important;
+    border: 1px solid var(--dispatch-accent) !important;
+    color: var(--dispatch-accent) !important;
+    border-radius: 6px !important;
+}
+
+.zbsPage .sapMToken .sapMTokenText {
+    font-weight: 500 !important;
+}
+
+.zbsPage .sapMToken .sapMTokenDelete {
+    color: var(--dispatch-accent) !important;
+}
+
+/* ================================================================
+ *  BUTTONS
+ * ================================================================ */
+
+.zbsPage .sapMBtn {
+    min-height: 2.75rem !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    transition: transform 0.12s ease, box-shadow 0.12s ease !important;
+    padding: 0.5rem 1.25rem !important;
+}
+
+.zbsPage .sapMBtn:not(.sapMBtnDisabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(8, 84, 160, 0.16) !important;
+}
+
+.zbsPage .sapMBtn:not(.sapMBtnDisabled):active {
+    transform: translateY(0);
+}
+
+/* Default button */
+.zbsPage .sapMBtnDefault {
+    background-color: #f0f1f3 !important;
+    color: #2c3e50 !important;
+    border: 1px solid #d4d8dd !important;
+}
+
+.zbsPage .sapMBtnDefault:not(.sapMBtnDisabled):hover {
+    background-color: #e8ebf0 !important;
+}
+
+/* Emphasized button (primary action) */
+.zbsPage .sapMBtnEmphasized {
+    background: linear-gradient(90deg, var(--dispatch-accent) 0%, #064482 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 2px 8px rgba(8, 84, 160, 0.25) !important;
+}
+
+.zbsPage .sapMBtnEmphasized:not(.sapMBtnDisabled):hover {
+    box-shadow: 0 6px 16px rgba(8, 84, 160, 0.35) !important;
+}
+
+/* Transparent button */
+.zbsPage .sapMBtnTransparent {
+    color: #2c3e50 !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+.zbsPage .sapMBtnTransparent:not(.sapMBtnDisabled):hover {
+    background-color: var(--dispatch-accent-light) !important;
+}
+
+/* Negative button (delete actions) */
+.zbsPage .sapMBtnNegative .sapMBtnIcon,
+.deleteRowButton .sapMBtnIcon {
+    color: var(--dispatch-destructive) !important;
+}
+
+.zbsPage .sapMBtnNegative:hover,
+.deleteRowButton:hover {
+    background-color: #ffecec !important;
+}
+
+/* ================================================================
+ *  TABLES & DATA
+ * ================================================================ */
+
+.zbsItemsTable,
+.zbsBillingTable {
+    border-radius: 8px !important;
+    overflow: hidden;
+    box-shadow: var(--dispatch-shadow-subtle) !important;
+    transition: box-shadow 0.2s ease !important;
+}
+
+.zbsItemsTable:hover,
+.zbsBillingTable:hover {
+    box-shadow: var(--dispatch-shadow-hover) !important;
+}
+
+/* Group headers */
+.zbsItemsTable .sapMGHLI {
+    background: linear-gradient(90deg, var(--dispatch-accent-light) 0%, #f5f7fa 100%);
+    border-left: 4px solid var(--dispatch-accent);
+    font-weight: 700;
+    color: var(--dispatch-accent);
+}
+
+.zbsItemsTable .sapMGHLIGroupTitle {
+    font-weight: 700 !important;
+    color: var(--dispatch-accent) !important;
+}
+
+/* Table header styling */
+.zbsItemsTable .sapMListTblHeaderCell,
+.zbsBillingTable .sapMListTblHeaderCell {
+    background: linear-gradient(90deg, var(--dispatch-accent-light) 0%, #ffffff 100%) !important;
+    font-weight: 700 !important;
+    color: var(--dispatch-accent) !important;
+    border-bottom: 2px solid var(--dispatch-accent) !important;
+}
+
+/* Table row hover effect */
+.zbsItemsTable .sapMListTblRow:hover,
+.zbsItemsTable .sapMLIB:hover,
+.zbsBillingTable .sapMListTblRow:hover,
+.zbsBillingTable .sapMLIB:hover {
+    background-color: var(--dispatch-accent-light) !important;
+}
+
+/* Table row borders */
+.zbsItemsTable .sapMListTblRow,
+.zbsBillingTable .sapMListTblRow {
+    border-bottom: 1px solid #ecf0f5 !important;
+}
+
+.zbsItemsTable .sapMListTblRow:last-child,
+.zbsBillingTable .sapMListTblRow:last-child {
+    border-bottom: none !important;
+}
+
+/* Horizontal scroll for billing table */
 .zbsBillingTable {
     overflow-x: auto;
 }
@@ -27,4 +270,162 @@
 .zbsBillingTable .sapMText,
 .zbsBillingTable .sapMObjectNumberText {
     white-space: nowrap;
+}
+
+/* ================================================================
+ *  MESSAGE STRIPS & ALERTS
+ * ================================================================ */
+
+.zbsPage .sapMMsgStrip {
+    border-radius: 8px !important;
+    border: none !important;
+    box-shadow: var(--dispatch-shadow-subtle) !important;
+    transition: box-shadow 0.2s ease !important;
+}
+
+.zbsPage .sapMMsgStripInfo {
+    background-color: var(--dispatch-accent-light) !important;
+    color: var(--dispatch-accent) !important;
+}
+
+.zbsPage .sapMMsgStripError {
+    background-color: #ffecec !important;
+    color: var(--dispatch-destructive) !important;
+}
+
+.zbsPage .sapMMsgStripSuccess {
+    background-color: #e6f7ee !important;
+    color: var(--dispatch-success) !important;
+}
+
+.zbsPage .sapMMsgStripWarning {
+    background-color: #fff4e6 !important;
+    color: #cc6600 !important;
+}
+
+/* ================================================================
+ *  OBJECT NUMBERS & TOTALS
+ * ================================================================ */
+
+.zbsPage .sapMObjectNumberText {
+    font-weight: 700 !important;
+    color: var(--dispatch-accent) !important;
+}
+
+.zbsPage .sapMObjectNumber[state="Error"] .sapMObjectNumberText {
+    color: var(--dispatch-destructive) !important;
+}
+
+/* Total section emphasis */
+.zbsPage .zbsTotalSection {
+    background: linear-gradient(90deg, var(--dispatch-accent-light) 0%, #ffffff 100%);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid var(--dispatch-accent);
+    margin: 1.5rem 0;
+    box-shadow: var(--dispatch-shadow-subtle);
+}
+
+.zbsPage .zbsTotalSection .sapMLabel {
+    color: var(--dispatch-accent) !important;
+    font-weight: 700 !important;
+}
+
+.zbsPage .zbsTotalSection .sapMObjectNumber {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+/* ================================================================
+ *  DIALOGS & MODALS
+ * ================================================================ */
+
+.sapMDialog {
+    border-radius: 14px !important;
+    box-shadow: 0 8px 28px rgba(8, 84, 160, 0.2) !important;
+}
+
+.sapMDialog > .sapMDialogTitle {
+    background: linear-gradient(90deg, var(--dispatch-accent) 0%, #0644a0 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    padding: 1.25rem 1.5rem !important;
+    border-bottom: none !important;
+}
+
+.sapMDialog > .sapMDialogCont {
+    padding: 1.5rem !important;
+    background: #ffffff;
+}
+
+.sapMDialog .sapMBtn {
+    border-radius: 8px !important;
+}
+
+/* ================================================================
+ *  FILE UPLOADER & INPUTS
+ * ================================================================ */
+
+.sapUiUnifiedFileUploader {
+    border-radius: 8px !important;
+}
+
+.sapUiUnifiedFileUploadBtText {
+    border-radius: 8px !important;
+    background: linear-gradient(90deg, var(--dispatch-accent) 0%, #0644a0 100%) !important;
+    color: #ffffff !important;
+    font-weight: 500 !important;
+    min-height: 2.75rem !important;
+    border: none !important;
+}
+
+.sapUiUnifiedFileUploadBtText:hover {
+    opacity: 0.9;
+}
+
+/* ================================================================
+ *  RESPONSIVE DESIGN
+ * ================================================================ */
+
+@media (max-width: 900px) {
+    .zbsSelectionRow {
+        gap: 1.5rem;
+    }
+
+    .zbsSelectionCol {
+        min-width: auto;
+        flex: 1;
+    }
+}
+
+@media (max-width: 750px) {
+    .zbsSelectionRow {
+        gap: 1rem;
+        flex-direction: column;
+    }
+
+    .zbsSelectionCol {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .zbsPage .sapMPanel > .sapMPanelContent {
+        padding: 1rem !important;
+    }
+
+    .zbsPage .sapMPanel > .sapMPanelHdr {
+        padding: 0.75rem 1rem !important;
+        font-size: 1rem !important;
+    }
+
+    .zbsPage .sapMBtn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .zbsItemsTable,
+    .zbsBillingTable {
+        font-size: 0.875rem;
+    }
 }
