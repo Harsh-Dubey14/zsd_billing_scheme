@@ -72,8 +72,7 @@
                         <Column width="7rem" minScreenWidth="Desktop" demandPopin="true" importance="Low"><Text text="HSN Code" /></Column>
                         <Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Bag" /></Column>
                         <Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Pack" /></Column>
-                        <Column width="5.5rem" hAlign="End" importance="High"><Text text="Qty" /></Column>
-                        <Column width="5rem" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Unit" /></Column>
+                        <Column width="9rem" hAlign="End" importance="High"><Text text="Qty" /></Column>
                         <Column width="7rem" hAlign="End" importance="High"><Text text="Rate" /></Column>
                     </columns>
 
@@ -88,8 +87,7 @@
                                 <Text text="{hsnCode}" />
                                 <Text text="{bag}" />
                                 <Text text="{pack}" />
-                                <Text text="{qty}" />
-                                <Text text="{unit}" />
+                                <Text text="{= ${qty} + ' ' + ${unit} + ' (' + ${quantityinbaseunit} + ' ' + ${actualUom} + ')' }" />
                                 <ObjectNumber number="{rate}" unit="INR" />
                             </cells>
                         </ColumnListItem>
@@ -110,8 +108,7 @@
 
                     <columns>
                         <Column width="3.5rem" hAlign="Begin"><Text text="Sr No." /></Column>
-                        <Column width="4.5rem" hAlign="End"><Text text="Qty" /></Column>
-                        <Column width="4rem"><Text text="Unit" /></Column>
+                        <Column width="8rem" hAlign="End"><Text text="Qty" /></Column>
                         <Column width="5.5rem" hAlign="End"><Text text="Rate" /></Column>
                         <Column width="8rem"><Text text="Scheme Name" /></Column>
                         <Column width="6rem"><Text text="Scheme Type" /></Column>
@@ -129,8 +126,7 @@
                         <ColumnListItem>
                             <cells>
                                 <Text text="{srNo}" />
-                                <Text text="{qty}" />
-                                <Text text="{unit}" />
+                                <Text text="{= ${qty} + ' ' + ${unit} + ' (' + ${quantityinbaseunit} + ' ' + ${actualUom} + ')' }" />
                                 <ObjectNumber number="{rate}" unit="INR" />
                                 <Text text="{schemeName}" />
                                 <Text text="{schemeType}" />

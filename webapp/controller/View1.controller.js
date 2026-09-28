@@ -601,7 +601,9 @@ sap.ui.define([
                     rate: Number(oRow.Rate) || 0,
                     customerId: oRow.Customer || "",
                     customerName: oRow.customerName || "",
-                    customerAddress: oRow.Address || ""
+                    customerAddress: oRow.Address || "",
+                    quantityinbaseunit: oRow.quantityinbaseunit || 0,
+                    actualUom: oRow.actualuom || ""
                 };
             });
 
@@ -831,7 +833,7 @@ sap.ui.define([
 
             var aBillingItems = aItems.map(function (oItem) {
                 var fRate = oItem.rate || 0;
-                var fQty = oItem.qty || 0;
+                var fQty = oItem.quantityinbaseunit || 0;
 
                 var fRateAfterDisA = this._round2(fRate - (fRate * fDisc1));
                 var fRateAfterDisB = this._round2(fRateAfterDisA - (fRateAfterDisA * fDisc2));
@@ -843,6 +845,8 @@ sap.ui.define([
                     srNo: oItem.srNo,
                     qty: oItem.qty,
                     unit: oItem.unit,
+                    quantityinbaseunit: oItem.quantityinbaseunit,
+                    actualUom: oItem.actualUom,
                     rate: oItem.rate,
                     schemeName: oScheme.SchemeName,
                     schemeType: oScheme.SchemeType,
@@ -944,16 +948,40 @@ sap.ui.define([
             BusyIndicator.show(0);
 
             this._postSchemeBilling(oPayload)
-                .then(function () {
+                .then(function (oResult) {
                     BusyIndicator.hide();
-                    MessageBox.success("Scheme billing posted successfully.", {
-                        title: "Success"
-                    });
-                })
+                    this._showSchemeBillingResult(oResult);
+                }.bind(this))
                 .catch(function (oError) {
                     BusyIndicator.hide();
                     MessageBox.error("Could not post scheme billing: " + (oError && oError.message ? oError.message : oError));
                 });
+        },
+
+        // The action responds 200 OK even for business failures (e.g. a
+        // delivery already fully invoiced) - the outcome is only in the
+        // response body's own Status/Message, not the HTTP status code, so
+        // that's what drives the success/error box.
+        _showSchemeBillingResult(oResult) {
+            var sStatus = oResult && oResult.Status;
+            var sMessage = (oResult && oResult.Message) || "";
+
+            if (sStatus === "SUCCESS") {
+                MessageBox.success(sMessage || "Scheme billing posted successfully.", {
+                    title: "Success"
+                });
+            } else if (sStatus === "ERROR") {
+                MessageBox.error(sMessage || "Scheme billing posting failed.", {
+                    title: "Error"
+                });
+            } else {
+                // No result body (e.g. 204 No Content) or an unrecognized
+                // status - fall back to a generic success rather than
+                // guessing at an error.
+                MessageBox.success(sMessage || "Scheme billing posted successfully.", {
+                    title: "Success"
+                });
+            }
         },
 
         _buildSchemeBillingPayload() {
@@ -1049,12 +1077,32 @@ sap.ui.define([
             }).then(function (oResponse) {
                 if (!oResponse.ok) {
                     return oResponse.text().then(function (sText) {
-                        throw new Error("HTTP " + oResponse.status + (sText ? ": " + sText : ""));
-                    });
+                        throw new Error(this._extractErrorMessage(sText) || ("HTTP " + oResponse.status));
+                    }.bind(this));
                 }
 
                 return oResponse.status === 204 ? null : oResponse.json();
-            });
+            }.bind(this));
+        },
+
+        // Prefer the backend's own error text (either this action's
+        // {Message: ...} shape or the standard OData {error: {message}}
+        // shape) over the raw HTTP status/body.
+        _extractErrorMessage(sText) {
+            if (!sText) {
+                return "";
+            }
+
+            try {
+                var oBody = JSON.parse(sText);
+
+                return oBody.Message ||
+                    (oBody.error && oBody.error.message && oBody.error.message.value) ||
+                    (oBody.error && oBody.error.message) ||
+                    sText;
+            } catch (e) {
+                return sText;
+            }
         },
 
         _fetchCsrfToken(sServiceUri) {
