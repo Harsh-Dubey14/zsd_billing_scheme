@@ -1,0 +1,287 @@
+/* ============================================================= */
+/* PAGE                                                          */
+/* ============================================================= */
+
+.zbsDynamicPage {
+    background: var(--sapBackgroundColor);
+}
+
+.zbsDynamicPage .sapFDynamicPageContent {
+    padding: 0 !important;
+}
+
+.zbsPageContent {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1rem 1.25rem 5rem 1.25rem;
+    box-sizing: border-box;
+}
+
+.zbsPageSubtitle {
+    color: var(--sapContent_LabelColor);
+    margin-top: 0.125rem;
+}
+
+
+/* ============================================================= */
+/* DYNAMIC PAGE HEADER                                           */
+/* ============================================================= */
+
+.zbsHeaderContent {
+    width: 100%;
+}
+
+.zbsSectionHeader {
+    margin-bottom: 1rem;
+}
+
+.zbsSectionDescription {
+    color: var(--sapContent_LabelColor);
+    margin-top: 0.15rem;
+}
+
+.zbsFilterGrid {
+    width: 100%;
+}
+
+.zbsField {
+    width: 100%;
+}
+
+.zbsFieldLabel {
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+
+/* ============================================================= */
+/* ACTION AREA                                                   */
+/* ============================================================= */
+
+.zbsHeaderActions {
+    width: 100%;
+    margin-top: 0.75rem;
+    gap: 0.5rem;
+}
+
+.zbsSecondaryActions {
+    gap: 0.25rem;
+}
+
+.zbsFetchButton {
+    min-width: 11rem;
+}
+
+
+/* ============================================================= */
+/* SUMMARY                                                       */
+/* ============================================================= */
+
+.zbsSummaryArea {
+    width: 100%;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.zbsSummaryCard {
+    flex: 1 1 15rem;
+    min-width: 14rem;
+
+    padding: 0.9rem 1rem;
+
+    background: var(--sapGroup_ContentBackground);
+    border: 1px solid var(--sapGroup_ContentBorderColor);
+    border-radius: 0.75rem;
+
+    box-sizing: border-box;
+}
+
+.zbsSummaryHeader {
+    color: var(--sapContent_LabelColor);
+    margin-bottom: 0.4rem;
+}
+
+
+/* ============================================================= */
+/* CONTENT CARDS                                                 */
+/* ============================================================= */
+
+.zbsCard {
+    width: 100%;
+
+    background: var(--sapGroup_ContentBackground);
+
+    border: 1px solid var(--sapGroup_ContentBorderColor);
+    border-radius: 0.75rem;
+
+    overflow: hidden;
+
+    margin-bottom: 1rem;
+
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.06);
+}
+
+.zbsCardToolbar {
+    border-bottom: 1px solid var(--sapGroup_ContentBorderColor);
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+
+/* ============================================================= */
+/* TABLE                                                         */
+/* ============================================================= */
+
+.zbsResponsiveTable {
+    width: 100%;
+}
+
+.zbsResponsiveTable .sapMListTblHeaderCell {
+    font-weight: 600;
+    background: var(--sapList_HeaderBackground);
+    border-bottom: 2px solid var(--sapList_BorderColor);
+}
+
+.zbsResponsiveTable .sapMListTblCell {
+    vertical-align: middle;
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+}
+
+.zbsResponsiveTable .sapMListTblCell .sapMText {
+    line-height: 1.45;
+}
+
+.zbsResponsiveTable .sapMObjectNumberText {
+    font-variant-numeric: tabular-nums;
+}
+
+.zbsSummaryCard .sapMTitle {
+    overflow-wrap: anywhere;
+}
+
+.zbsSummaryCard .sapMObjectNumberText,
+.zbsFooterTotal .sapMObjectNumberText {
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.zbsBillingTable .sapMObjectNumber {
+    white-space: nowrap;
+}
+
+.zbsQuantityDetail {
+    color: var(--sapContent_LabelColor);
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+
+/* ============================================================= */
+/* FOOTER                                                        */
+/* ============================================================= */
+
+.zbsFooter {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.zbsFooterTotal {
+    min-width: 9rem;
+}
+
+.zbsFooterLabel {
+    color: var(--sapContent_LabelColor);
+    font-size: 0.75rem;
+}
+
+.zbsPostButton {
+    min-width: 9rem;
+}
+
+
+/* ============================================================= */
+/* TABLET                                                        */
+/* ============================================================= */
+
+@media (max-width: 1024px) {
+
+    .zbsPageContent {
+        padding: 0.75rem 0.75rem 5rem 0.75rem;
+    }
+
+    .zbsSummaryCard {
+        flex: 1 1 calc(50% - 0.75rem);
+    }
+
+    .zbsCard {
+        border-radius: 0.625rem;
+    }
+}
+
+
+/* ============================================================= */
+/* MOBILE                                                        */
+/* ============================================================= */
+
+@media (max-width: 600px) {
+
+    .zbsPageContent {
+        padding: 0.5rem 0.5rem 6rem 0.5rem;
+    }
+
+    .zbsPageSubtitle {
+        display: none;
+    }
+
+    .zbsSummaryArea {
+        gap: 0.5rem;
+    }
+
+    .zbsSummaryCard {
+        flex: 1 1 100%;
+        min-width: 100%;
+        padding: 0.75rem;
+    }
+
+    .zbsCard {
+        border-radius: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .zbsHeaderActions {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .zbsSecondaryActions {
+        width: 100%;
+    }
+
+    .zbsSecondaryActions .sapMBtn {
+        flex: 1 1 auto;
+    }
+
+    .zbsFetchButton {
+        width: 100% !important;
+        margin-top: 0.25rem;
+    }
+
+    .zbsFetchButton .sapMBtnInner {
+        width: 100%;
+    }
+
+    .zbsFooter {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    .zbsFooterTotal {
+        min-width: auto;
+    }
+
+    .zbsPostButton {
+        min-width: auto;
+    }
+}

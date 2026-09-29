@@ -1,176 +1,813 @@
-<mvc:View controllerName="com.zeel.billingscheme.billingscheme.controller.View1"
+<mvc:View
+    controllerName="com.zeel.billingscheme.billingscheme.controller.View1"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
-    height="100%" displayBlock="true">
-    <Page id="page" title="{i18n>title}" showHeader="true" showFooter="false" enableScrolling="true" class="sapUiResponsiveContentPadding zbsPage">
-        <content>
+    xmlns:f="sap.f"
+    xmlns:l="sap.ui.layout"
+    height="100%"
+    displayBlock="true">
 
-            <!-- Selection Criteria -->
-            <Panel headerText="Selection Criteria" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
-                <HBox wrap="Wrap" class="sapUiMediumMargin zbsSelectionRow">
-                    <VBox class="zbsSelectionCol">
-                        <layoutData>
-                            <FlexItemData growFactor="1" baseSize="0%" />
-                        </layoutData>
-                        <Label text="Delivery Number(s)" design="Bold" labelFor="deliveryInput" class="sapUiSmallMarginBottom" />
+    <f:DynamicPage
+        id="page"
+        fitContent="true"
+        headerExpanded="true"
+        toggleHeaderOnTitleClick="false"
+        showFooter="true"
+        class="zbsDynamicPage">
 
-                        <MultiInput id="deliveryInput"
-                            width="100%"
-                            placeholder="Enter delivery number and press Enter"
-                            showValueHelp="true"
-                            valueHelpRequest=".onDeliveryValueHelpRequest"
-                            submit=".onDeliverySubmit"
-                            tokenUpdate=".onDeliveryTokenUpdate" />
+        <!-- ====================================================== -->
+        <!-- PAGE TITLE                                             -->
+        <!-- ====================================================== -->
+        <f:title>
+            <f:DynamicPageTitle>
 
-                        <HBox class="sapUiSmallMarginTop" wrap="Wrap" alignItems="Center" justifyContent="SpaceBetween">
-                            <HBox wrap="Wrap" alignItems="Center">
-                                <Button text="Upload" icon="sap-icon://upload" type="Default" press=".onOpenUploadDialog" class="sapUiTinyMarginEnd" />
-                                <Button text="Clear" icon="sap-icon://delete" type="Transparent" press=".onClearAll" enabled="{/hasDeliveryNumbers}" />
+                <f:heading>
+                    <VBox>
+                        <Title
+                            text="{i18n>title}"
+                            level="H2" />
+
+                        <Text
+                            text="Create billing scheme from delivery documents"
+                            class="zbsPageSubtitle" />
+                    </VBox>
+                </f:heading>
+
+                <f:snappedContent>
+                    <ObjectStatus
+                        text="{/schemeSelectedText}"
+                        icon="sap-icon://sales-document"
+                        state="Information"
+                        visible="{/hasSchemeDetails}" />
+                </f:snappedContent>
+
+            </f:DynamicPageTitle>
+        </f:title>
+
+
+        <!-- ====================================================== -->
+        <!-- RESPONSIVE SELECTION / FILTER AREA                     -->
+        <!-- ====================================================== -->
+        <f:header>
+            <f:DynamicPageHeader
+                pinnable="true">
+
+                <VBox class="zbsHeaderContent">
+
+                    <HBox
+                        alignItems="Center"
+                        justifyContent="SpaceBetween"
+                        class="zbsSectionHeader">
+
+                        <VBox>
+                            <Title
+                                text="Selection Criteria"
+                                level="H4" />
+
+                            <Text
+                                text="Select delivery document and applicable scheme"
+                                class="zbsSectionDescription" />
+                        </VBox>
+
+                    </HBox>
+
+
+                    <l:Grid
+                        defaultSpan="XL4 L4 M6 S12"
+                        hSpacing="1"
+                        vSpacing="1"
+                        width="100%"
+                        class="zbsFilterGrid">
+
+
+                        <!-- DELIVERY NUMBER -->
+                        <VBox class="zbsField">
+
+                            <layoutData>
+                                <l:GridData span="XL4 L4 M6 S12" />
+                            </layoutData>
+
+                            <Label
+                                text="Delivery Number(s)"
+                                labelFor="deliveryInput"
+                                required="true"
+                                class="zbsFieldLabel" />
+
+                            <MultiInput
+                                id="deliveryInput"
+                                width="100%"
+                                placeholder="Enter delivery number and press Enter"
+                                showValueHelp="true"
+                                valueHelpRequest=".onDeliveryValueHelpRequest"
+                                submit=".onDeliverySubmit"
+                                tokenUpdate=".onDeliveryTokenUpdate" />
+
+                            <HBox wrap="Wrap" alignItems="Center" class="sapUiSmallMarginTop">
+                            <Button text="Fetch Delivery Items"
+                                icon="sap-icon://refresh"
+                                type="Emphasized"
+                                press=".onFetchItems"
+                                enabled="{/hasDeliveryNumbers}"
+                                class="zbsFetchButton sapUiTinyMarginEnd" />
+                            <Button text="Clear"
+                                icon="sap-icon://decline"
+                                type="Transparent"
+                                tooltip="Clear delivery input"
+                                press=".onClearDeliveryInput" />
                             </HBox>
-                            <Button text="Fetch Delivery Items" icon="sap-icon://arrow-right" type="Emphasized" press=".onFetchItems" enabled="{/hasDeliveryNumbers}" />
+
+                        </VBox>
+
+
+                        <!-- SCHEME TYPE -->
+                        <VBox class="zbsField">
+
+                            <layoutData>
+                                <l:GridData span="XL3 L3 M6 S12" />
+                            </layoutData>
+
+                            <Label
+                                text="Scheme Type"
+                                labelFor="schemeTypeSelect"
+                                class="zbsFieldLabel" />
+
+                            <Select
+                                id="schemeTypeSelect"
+                                width="100%"
+                                selectedKey="{/schemeType}"
+                                change=".onSchemeTypeChange">
+
+                                <core:Item
+                                    key=""
+                                    text="Clear" />
+
+                                <core:Item
+                                    key="regular"
+                                    text="Regular" />
+
+                                <core:Item
+                                    key="advance"
+                                    text="Advance" />
+
+                            </Select>
+
+                        </VBox>
+
+
+                        <!-- SCHEME -->
+                        <VBox class="zbsField">
+
+                            <layoutData>
+                                <l:GridData span="XL5 L5 M12 S12" />
+                            </layoutData>
+
+                            <Label
+                                text="Scheme"
+                                labelFor="schemeInput"
+                                class="zbsFieldLabel" />
+
+                            <Input
+                                id="schemeInput"
+                                width="100%"
+                                showValueHelp="true"
+                                valueHelpRequest=".onSchemeValueHelpRequest"
+                                valueHelpOnly="true"
+                                enabled="{= !!${/schemeType} }"
+                                tooltip="{/schemeSelectedText}"
+                                placeholder="Select scheme"
+                                value="{/schemeSelectedText}" />
+
+                        </VBox>
+
+                    </l:Grid>
+
+
+                    <!-- SCHEME INFORMATION -->
+                    <MessageStrip
+                        text="{/schemeSummaryText}"
+                        type="Information"
+                        showIcon="true"
+                        showCloseButton="false"
+                        visible="{/hasSchemeDetails}"
+                        class="sapUiSmallMarginTop" />
+
+                </VBox>
+
+            </f:DynamicPageHeader>
+        </f:header>
+
+
+        <!-- ====================================================== -->
+        <!-- PAGE CONTENT                                           -->
+        <!-- ====================================================== -->
+        <f:content>
+
+            <VBox class="zbsPageContent">
+
+
+                <!-- ================================================== -->
+                <!-- QUICK SUMMARY                                      -->
+                <!-- ================================================== -->
+
+                <FlexBox
+                    wrap="Wrap"
+                    visible="{/hasSchemeDetails}"
+                    class="zbsSummaryArea">
+
+
+                    <VBox class="zbsSummaryCard">
+
+                        <HBox
+                            alignItems="Center"
+                            class="zbsSummaryHeader">
+
+                            <core:Icon
+                                src="sap-icon://sales-document"
+                                size="1rem"
+                                class="sapUiTinyMarginEnd" />
+
+                            <Text text="Scheme" />
+
                         </HBox>
+
+                        <Title
+                            text="{/schemeSelectedText}"
+                            wrapping="true" />
+
                     </VBox>
 
-                    <VBox class="zbsSelectionCol">
-                        <layoutData>
-                            <FlexItemData growFactor="1" baseSize="0%" />
-                        </layoutData>
-                        <Label text="Scheme Type" design="Bold" labelFor="schemeTypeSelect" class="sapUiSmallMarginBottom" />
-                        <Select id="schemeTypeSelect" width="100%" selectedKey="{/schemeType}" change=".onSchemeTypeChange">
-                            <core:Item key="" text="Clear" />
-                            <core:Item key="regular" text="Regular" />
-                            <core:Item key="advance" text="Advance" />
-                        </Select>
-                    </VBox>
 
-                    <VBox class="zbsSelectionCol">
-                        <layoutData>
-                            <FlexItemData growFactor="1" baseSize="0%" />
-                        </layoutData>
-                        <Label text="Scheme" design="Bold" labelFor="schemeInput" class="sapUiSmallMarginBottom" />
+                    <VBox class="zbsSummaryCard">
 
-                        <Input id="schemeInput"
-                            width="100%"
-                            showValueHelp="true"
-                            valueHelpRequest=".onSchemeValueHelpRequest"
-                            placeholder="Select a scheme..."
-                            value="{/schemeSelectedText}" />
-                    </VBox>
-                </HBox>
+                        <HBox
+                            alignItems="Center"
+                            class="zbsSummaryHeader">
 
-                <MessageStrip text="{/schemeSummaryText}" type="Information" showIcon="true" visible="{/hasSchemeDetails}" class="sapUiMediumMarginBegin sapUiMediumMarginEnd sapUiSmallMarginBottom" />
-            </Panel>
+                            <core:Icon
+                                src="sap-icon://money-bills"
+                                size="1rem"
+                                class="sapUiTinyMarginEnd" />
 
-            <!-- Delivery Items -->
-            <Panel headerText="Delivery Items" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
-                <Table id="itemsTable"
-                    items="{path: '/items', sorter: {path: 'deliveryNumber'}}"
-                    noDataText="No delivery items yet. Enter delivery number(s) and click 'Fetch Delivery Items'."
-                    sticky="ColumnHeaders,HeaderToolbar"
-                    growing="true"
-                    growingThreshold="50"
-                    autoPopinMode="true"
-                    popinLayout="GridSmall"
-                    class="zbsItemsTable sapUiResponsiveMargin">
-                    
+                            <Text text="Billing Total" />
 
-                    <columns>
-                        <Column width="4rem" hAlign="Begin" importance="High"><Text text="Sr No." /></Column>
-                        <Column width="8rem" importance="High"><Text text="Delivery No" /></Column>
-                        <Column minScreenWidth="Tablet" demandPopin="true" importance="High"><Text text="Customer Name" /></Column>
-                        <Column minScreenWidth="Tablet" demandPopin="true" importance="High"><Text text="Product" /></Column>
-                        <Column width="7rem" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Color" /></Column>
-                        <Column width="6rem" importance="High"><Text text="Size" /></Column>
-                        <Column width="8rem" minScreenWidth="Desktop" demandPopin="true" importance="Low"><Text text="Brand" /></Column>
-                        <Column width="7rem" minScreenWidth="Desktop" demandPopin="true" importance="Low"><Text text="HSN Code" /></Column>
-                        <Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Bag" /></Column>
-                        <Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Pack" /></Column>
-                        <Column width="9rem" hAlign="End" importance="High"><Text text="Qty" /></Column>
-                        <Column width="7rem" hAlign="End" importance="High"><Text text="Rate" /></Column>
-                    </columns>
+                        </HBox>
 
-                    <items>
-                        <ColumnListItem>
-                            <cells>
-                                <Text text="{srNo}" />
-                                <Text text="{deliveryNumber}" />
-                                <Text text="{customerName}" />
-                                <Text text="{product}" />
-                                <Text text="{color}" />
-                                <Text text="{size}" />
-                                <Text text="{brand}" />
-                                <Text text="{hsnCode}" />
-                                <Text text="{bag}" />
-                                <Text text="{pack}" />
-                                <Text text="{= ${qty} + ' ' + ${unit} + ' (' + ${quantityinbaseunit} + ' ' + ${actualUom} + ')' }" />
-                                <ObjectNumber number="{rate}" unit="INR" />
-                            </cells>
-                        </ColumnListItem>
-                    </items>
-                </Table>
-            </Panel>
-
-            <!-- Billing / Scheme Calculation -->
-            <Panel headerText="Billing Details" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
-                <Table id="billingTable"
-                    items="{/billingItems}"
-                    noDataText="No billing details yet. Fetch delivery items and select a scheme."
-                    sticky="ColumnHeaders,HeaderToolbar"
-                    growing="true"
-                    growingThreshold="50"
-                    autoPopinMode="false"
-                    class="zbsItemsTable zbsBillingTable">
-
-                    <columns>
-                        <Column width="3.5rem" hAlign="Begin"><Text text="Sr No." /></Column>
-                        <Column width="8rem" hAlign="End"><Text text="Qty" /></Column>
-                        <Column width="5.5rem" hAlign="End"><Text text="Rate" /></Column>
-                        <Column width="4rem" hAlign="End"><Text text="Dis 1" /></Column>
-                        <Column width="6.5rem" hAlign="End"><Text text="Rate After Dis A" /></Column>
-                        <Column width="7rem" hAlign="End"><Text text="Value After Dis A" /></Column>
-                        <Column width="4rem" hAlign="End"><Text text="Dis 2" /></Column>
-                        <Column width="7rem" hAlign="End"><Text text="Value after Dis B" /></Column>
-                        <Column width="4.5rem" hAlign="End"><Text text="GST %" /></Column>
-                        <Column width="5.5rem" hAlign="End"><Text text="GST Value" /></Column>
-                        <Column width="5.5rem" hAlign="End"><Text text="Total" /></Column>
-                    </columns>
-
-                    <items>
-                        <ColumnListItem>
-                            <cells>
-                                <Text text="{srNo}" />
-                                <Text text="{= ${qty} + ' ' + ${unit} + ' (' + ${quantityinbaseunit} + ' ' + ${actualUom} + ')' }" />
-                                <ObjectNumber number="{rate}" unit="INR" />
-                                <Text text="{discount1}" />
-                                <ObjectNumber number="{rateAfterDisA}" unit="INR" />
-                                <ObjectNumber number="{valueAfterDisA}" unit="INR" />
-                                <Text text="{discount2}" />
-                                <ObjectNumber number="{valueAfterDisB}" unit="INR" />
-                                <Text text="{gstPercent}" />
-                                <ObjectNumber number="{gstValue}" unit="INR" />
-                                <ObjectNumber number="{total}" unit="INR" />
-                            </cells>
-                        </ColumnListItem>
-                    </items>
-                </Table>
-
-                <MessageStrip text="{/schemeErrorText}" type="Error" showIcon="true" visible="{= !${/schemeValid} }" class="sapUiMediumMarginBegin sapUiMediumMarginEnd sapUiMediumMarginTop" />
-
-                <HBox class="sapUiMediumMargin" wrap="Wrap" alignItems="Center" justifyContent="End">
-                    <VBox alignItems="End">
-                        <Label text="Billing Total" design="Bold" class="sapUiTinyMarginBottom" />
                         <ObjectNumber
-                            number="{/billingTotal}"
-                            unit="INR"
+                            number="{path: '/billingTotal', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                            unit="{/transactionCurrency}"
                             emphasized="true"
-                            state="{= ${/schemeValid} ? 'None' : 'Error' }"
-                            class="sapUiLargeMarginEnd" />
-                    </VBox>
-                    <Button text="Post Scheme" icon="sap-icon://accept" type="Emphasized" press=".onPostScheme" enabled="{= ${/billingItems}.length > 0 &amp;&amp; ${/schemeValid} }" />
-                </HBox>
-            </Panel>
+                            state="{= ${/schemeValid} ? 'None' : 'Error' }" />
 
-        </content>
-    </Page>
+                    </VBox>
+
+
+                    <VBox class="zbsSummaryCard">
+
+                        <HBox
+                            alignItems="Center"
+                            class="zbsSummaryHeader">
+
+                            <core:Icon
+                                src="sap-icon://status-positive"
+                                size="1rem"
+                                class="sapUiTinyMarginEnd" />
+
+                            <Text text="Scheme Status" />
+
+                        </HBox>
+
+                        <ObjectStatus
+                            text="{= !${/billingItems}.length ? 'Fetch delivery items' : (${/schemeValid} ? 'Ready to Post' : 'Validation Required') }"
+                            state="{= !${/billingItems}.length ? 'None' : (${/schemeValid} ? 'Success' : 'Error') }"
+                            icon="{= !${/billingItems}.length ? 'sap-icon://pending' : (${/schemeValid} ? 'sap-icon://accept' : 'sap-icon://error') }" />
+
+                    </VBox>
+
+                </FlexBox>
+
+
+                <!-- ================================================== -->
+                <!-- DELIVERY ITEMS CARD                                -->
+                <!-- ================================================== -->
+                <VBox class="zbsCard">
+
+
+                    <OverflowToolbar class="zbsCardToolbar">
+
+                        <Title
+                            text="Delivery Items"
+                            level="H4" />
+
+                        <ToolbarSpacer />
+
+                        <ObjectStatus
+                            text="{= ${/items}.length + ' items' }"
+                            icon="sap-icon://shipping-status"
+                            state="Information" />
+
+                    </OverflowToolbar>
+
+
+                    <Table
+                        id="itemsTable"
+                        width="100%"
+                        items="{
+                            path: '/items',
+                            sorter: {
+                                path: 'deliveryNumber'
+                            }
+                        }"
+                        noDataText="No delivery items yet. Enter delivery number(s) and fetch delivery items."
+                        sticky="ColumnHeaders,HeaderToolbar"
+                        growing="true"
+                        growingThreshold="50"
+                        autoPopinMode="true"
+                        popinLayout="GridSmall"
+                        fixedLayout="false"
+                        class="zbsResponsiveTable">
+
+
+                        <columns>
+
+                            <Column
+                                width="4rem"
+                                hAlign="Begin"
+                                importance="Low"
+                                minScreenWidth="Desktop"
+                                demandPopin="true">
+
+                                <Text text="Sr No." />
+
+                            </Column>
+
+
+                            <Column
+                                width="8rem"
+                                importance="High">
+
+                                <Text text="Delivery No." />
+
+                            </Column>
+
+
+                            <Column
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="Customer Name" />
+
+                            </Column>
+
+
+                            <Column
+                                importance="High">
+
+                                <Text text="Product" />
+
+                            </Column>
+
+
+                            <Column
+                                width="7rem"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="Color" />
+
+                            </Column>
+
+
+                            <Column
+                                width="6rem"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="Size" />
+
+                            </Column>
+
+
+                            <Column
+                                width="8rem"
+                                minScreenWidth="Desktop"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="Brand" />
+
+                            </Column>
+
+
+                            <Column
+                                width="7rem"
+                                minScreenWidth="Desktop"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="HSN Code" />
+
+                            </Column>
+
+
+                            <Column
+                                width="5rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="Bag" />
+
+                            </Column>
+
+
+                            <Column
+                                width="5rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="Pack" />
+
+                            </Column>
+
+
+                            <Column
+                                width="9rem"
+                                hAlign="End"
+                                importance="High">
+
+                                <Text text="Quantity" />
+
+                            </Column>
+
+
+                            <Column
+                                width="7rem"
+                                hAlign="End"
+                                importance="High">
+
+                                <Text text="Rate" />
+
+                            </Column>
+
+                        </columns>
+
+
+                        <items>
+
+                            <ColumnListItem
+                                type="Inactive"
+                                vAlign="Middle">
+
+                                <cells>
+
+                                    <Text
+                                        text="{srNo}" />
+
+                                    <ObjectIdentifier
+                                        title="{deliveryNumber}" />
+
+                                    <Text
+                                        text="{customerName}"
+                                        wrapping="true" />
+
+                                    <ObjectIdentifier
+                                        title="{product}" />
+
+                                    <Text
+                                        text="{color}" />
+
+                                    <Text
+                                        text="{size}" />
+
+                                    <Text
+                                        text="{brand}"
+                                        wrapping="true" />
+
+                                    <Text
+                                        text="{hsnCode}" />
+
+                                    <ObjectNumber
+                                        number="{= ${unit}.toUpperCase() === 'BAG' ? ${qty} : ${bag} }" />
+
+                                    <ObjectNumber
+                                        number="{pack}" />
+
+                                    <Text text="{= ${quantityinbaseunit} + ' ' + ${actualUom} }" />
+
+                                    <ObjectNumber
+                                        number="{path: 'rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}" />
+
+                                </cells>
+
+                            </ColumnListItem>
+
+                        </items>
+
+                    </Table>
+
+                </VBox>
+
+
+                <!-- ================================================== -->
+                <!-- BILLING DETAILS CARD                               -->
+                <!-- ================================================== -->
+                <VBox class="zbsCard">
+
+
+                    <OverflowToolbar class="zbsCardToolbar">
+
+                        <Title
+                            text="Billing Details"
+                            level="H4" />
+
+                        <ToolbarSpacer />
+
+                        <ObjectStatus
+                            text="{= !${/billingItems}.length ? 'Awaiting items and scheme' : (${/schemeValid} ? 'Calculated' : 'Check Calculation') }"
+                            state="{= !${/billingItems}.length ? 'None' : (${/schemeValid} ? 'Success' : 'Error') }"
+                            icon="{= !${/billingItems}.length ? 'sap-icon://pending' : (${/schemeValid} ? 'sap-icon://sys-enter-2' : 'sap-icon://message-error') }" />
+
+                    </OverflowToolbar>
+
+
+                    <!-- VALIDATION ERROR -->
+                    <MessageStrip
+                        text="{/schemeErrorText}"
+                        type="Error"
+                        showIcon="true"
+                        showCloseButton="false"
+                        visible="{= !${/schemeValid} }"
+                        class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiSmallMarginBottom" />
+
+
+                    <Table
+                        id="billingTable"
+                        width="100%"
+                        items="{/billingItems}"
+                        noDataText="No billing details yet. Fetch delivery items and select a scheme."
+                        sticky="ColumnHeaders,HeaderToolbar"
+                        growing="true"
+                        growingThreshold="50"
+                        autoPopinMode="true"
+                        popinLayout="GridSmall"
+                        fixedLayout="false"
+                        class="zbsResponsiveTable zbsBillingTable">
+
+
+                        <columns>
+
+
+                            <Column
+                                width="3.5rem"
+                                minScreenWidth="Desktop"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="Sr No." />
+
+                            </Column>
+
+
+                            <Column
+                                width="8rem"
+                                hAlign="End"
+                                importance="High">
+
+                                <Text text="Quantity" />
+
+                            </Column>
+
+
+                            <Column
+                                width="6rem"
+                                hAlign="End"
+                                importance="High">
+
+                                <Text text="Rate" />
+
+                            </Column>
+
+
+                            <Column
+                                width="5rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="Dis. 1 %" />
+
+                            </Column>
+
+
+                            <Column
+                                width="8rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="Rate After Dis A" />
+
+                            </Column>
+
+
+                            <Column
+                                width="9rem"
+                                hAlign="End"
+                                minScreenWidth="Desktop"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="Value After Dis A" />
+
+                            </Column>
+
+
+                            <Column
+                                width="5rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="{= ${/schemeType} === 'advance' ? 'Dis 2 (' + ${/transactionCurrency} + ')' : 'Dis 2 (%)' }" />
+
+                            </Column>
+
+
+                            <Column
+                                width="9rem"
+                                hAlign="End"
+                                minScreenWidth="Desktop"
+                                demandPopin="true"
+                                importance="Low">
+
+                                <Text text="Value After Dis B" />
+
+                            </Column>
+
+
+                            <Column
+                                width="5rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="GST %" />
+
+                            </Column>
+
+
+                            <Column
+                                width="7rem"
+                                hAlign="End"
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium">
+
+                                <Text text="GST Value" />
+
+                            </Column>
+
+
+                            <Column
+                                width="7rem"
+                                hAlign="End"
+                                importance="High">
+
+                                <Text text="Total" />
+
+                            </Column>
+
+                        </columns>
+
+
+                        <items>
+
+                            <ColumnListItem
+                                vAlign="Middle">
+
+                                <cells>
+
+                                    <Text text="{srNo}" />
+
+                                    <Text text="{= ${quantityinbaseunit} + ' ' + ${actualUom} }" />
+
+                                    <ObjectNumber
+                                        number="{path: 'rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}" />
+
+                                    <Text
+                                        text="{discount1}" />
+
+                                    <ObjectNumber
+                                        number="{path: 'rateAfterDisA', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}" />
+
+                                    <ObjectNumber
+                                        number="{path: 'valueAfterDisA', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}" />
+
+                                    <Text
+                                        text="{discount2}" />
+
+                                    <ObjectNumber
+                                        number="{path: 'valueAfterDisB', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}" />
+
+                                    <Text
+                                        text="{gstPercent}" />
+
+                                    <ObjectNumber
+                                        number="{path: 'gstValue', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}" />
+
+                                    <ObjectNumber
+                                        number="{path: 'total', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        unit="{transactionCurrency}"
+                                        emphasized="true" />
+
+                                </cells>
+
+                            </ColumnListItem>
+
+                        </items>
+
+                    </Table>
+
+                </VBox>
+
+            </VBox>
+
+        </f:content>
+
+
+        <!-- ====================================================== -->
+        <!-- RESPONSIVE STICKY FOOTER                              -->
+        <!-- ====================================================== -->
+        <f:footer>
+
+            <OverflowToolbar class="zbsFooter">
+
+
+
+
+                <VBox
+                    alignItems="Start"
+                    class="zbsFooterTotal">
+
+                    <Text
+                        text="Billing Total"
+                        class="zbsFooterLabel" />
+
+                    <ObjectNumber
+                        number="{path: '/billingTotal', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                        unit="{/transactionCurrency}"
+                        emphasized="true"
+                        state="{= ${/schemeValid} ? 'None' : 'Error' }" />
+
+                </VBox>
+
+
+                <ToolbarSpacer />
+
+                <Button text="Clear"
+                    icon="sap-icon://delete"
+                    type="Transparent"
+                    press=".onClearAll"
+                    visible="{= !${/postingComplete} }"
+                    enabled="{= ${/hasDeliveryNumbers} || !!${/schemeType} || ${/items}.length > 0 }" />
+
+
+                <Button
+                    text="Post Scheme"
+                    icon="sap-icon://accept"
+                    type="Emphasized"
+                    press=".onPostScheme"
+                    visible="{= !${/postingComplete} }"
+                    enabled="{= ${/billingItems}.length > 0 &amp;&amp; ${/schemeValid} &amp;&amp; !${/posting} &amp;&amp; !${/postingComplete} }"
+                    class="zbsPostButton" />
+
+                <Button text="New"
+                    icon="sap-icon://add"
+                    type="Emphasized"
+                    visible="{/postingComplete}"
+                    press=".onNewBilling" />
+
+            </OverflowToolbar>
+
+        </f:footer>
+
+    </f:DynamicPage>
+
 </mvc:View>
