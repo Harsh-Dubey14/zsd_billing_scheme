@@ -36,6 +36,18 @@
                         <layoutData>
                             <FlexItemData growFactor="1" baseSize="0%" />
                         </layoutData>
+                        <Label text="Scheme Type" design="Bold" labelFor="schemeTypeSelect" class="sapUiSmallMarginBottom" />
+                        <Select id="schemeTypeSelect" width="100%" selectedKey="{/schemeType}" change=".onSchemeTypeChange">
+                            <core:Item key="" text="Clear" />
+                            <core:Item key="regular" text="Regular" />
+                            <core:Item key="advance" text="Advance" />
+                        </Select>
+                    </VBox>
+
+                    <VBox class="zbsSelectionCol">
+                        <layoutData>
+                            <FlexItemData growFactor="1" baseSize="0%" />
+                        </layoutData>
                         <Label text="Scheme" design="Bold" labelFor="schemeInput" class="sapUiSmallMarginBottom" />
 
                         <Input id="schemeInput"
@@ -53,9 +65,9 @@
             <!-- Delivery Items -->
             <Panel headerText="Delivery Items" expandable="true" expanded="true" class="sapUiResponsiveMargin" width="auto">
                 <Table id="itemsTable"
-                    items="{path: '/items', sorter: {path: 'deliveryNumber', group: true}, groupHeaderFactory: '.getDeliveryGroupHeader'}"
+                    items="{path: '/items', sorter: {path: 'deliveryNumber'}}"
                     noDataText="No delivery items yet. Enter delivery number(s) and click 'Fetch Delivery Items'."
-                    sticky="ColumnHeaders,HeaderToolbar,GroupHeaders"
+                    sticky="ColumnHeaders,HeaderToolbar"
                     growing="true"
                     growingThreshold="50"
                     autoPopinMode="true"
@@ -65,6 +77,8 @@
 
                     <columns>
                         <Column width="4rem" hAlign="Begin" importance="High"><Text text="Sr No." /></Column>
+                        <Column width="8rem" importance="High"><Text text="Delivery No" /></Column>
+                        <Column minScreenWidth="Tablet" demandPopin="true" importance="High"><Text text="Customer Name" /></Column>
                         <Column minScreenWidth="Tablet" demandPopin="true" importance="High"><Text text="Product" /></Column>
                         <Column width="7rem" minScreenWidth="Tablet" demandPopin="true" importance="Medium"><Text text="Color" /></Column>
                         <Column width="6rem" importance="High"><Text text="Size" /></Column>
@@ -80,6 +94,8 @@
                         <ColumnListItem>
                             <cells>
                                 <Text text="{srNo}" />
+                                <Text text="{deliveryNumber}" />
+                                <Text text="{customerName}" />
                                 <Text text="{product}" />
                                 <Text text="{color}" />
                                 <Text text="{size}" />
@@ -110,12 +126,10 @@
                         <Column width="3.5rem" hAlign="Begin"><Text text="Sr No." /></Column>
                         <Column width="8rem" hAlign="End"><Text text="Qty" /></Column>
                         <Column width="5.5rem" hAlign="End"><Text text="Rate" /></Column>
-                        <Column width="8rem"><Text text="Scheme Name" /></Column>
-                        <Column width="6rem"><Text text="Scheme Type" /></Column>
                         <Column width="4rem" hAlign="End"><Text text="Dis 1" /></Column>
-                        <Column width="4rem" hAlign="End"><Text text="Dis 2" /></Column>
                         <Column width="6.5rem" hAlign="End"><Text text="Rate After Dis A" /></Column>
-                        <Column width="6.5rem" hAlign="End"><Text text="Rate After Dis B" /></Column>
+                        <Column width="7rem" hAlign="End"><Text text="Value After Dis A" /></Column>
+                        <Column width="4rem" hAlign="End"><Text text="Dis 2" /></Column>
                         <Column width="7rem" hAlign="End"><Text text="Value after Dis B" /></Column>
                         <Column width="4.5rem" hAlign="End"><Text text="GST %" /></Column>
                         <Column width="5.5rem" hAlign="End"><Text text="GST Value" /></Column>
@@ -128,12 +142,10 @@
                                 <Text text="{srNo}" />
                                 <Text text="{= ${qty} + ' ' + ${unit} + ' (' + ${quantityinbaseunit} + ' ' + ${actualUom} + ')' }" />
                                 <ObjectNumber number="{rate}" unit="INR" />
-                                <Text text="{schemeName}" />
-                                <Text text="{schemeType}" />
                                 <Text text="{discount1}" />
-                                <Text text="{discount2}" />
                                 <ObjectNumber number="{rateAfterDisA}" unit="INR" />
-                                <ObjectNumber number="{rateAfterDisB}" unit="INR" />
+                                <ObjectNumber number="{valueAfterDisA}" unit="INR" />
+                                <Text text="{discount2}" />
                                 <ObjectNumber number="{valueAfterDisB}" unit="INR" />
                                 <Text text="{gstPercent}" />
                                 <ObjectNumber number="{gstValue}" unit="INR" />

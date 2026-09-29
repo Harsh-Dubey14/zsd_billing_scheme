@@ -5,6 +5,7 @@
     <TableSelectDialog
         id="schemeValueHelpDialog"
         title="Select Scheme"
+        multiSelect="{= ${/schemeType} === 'advance' }"
         noDataText="No schemes found."
         items="{schemes>/}"
         search=".onSchemeValueHelpSearch"

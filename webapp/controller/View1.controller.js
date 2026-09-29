@@ -25,6 +25,7 @@ sap.ui.define([
                 deliveryCount: 0,
                 hasDeliveryNumbers: false,
                 schemeDetails: null,
+                schemeType: "",
                 schemeSelectedText: "",
                 schemeSummaryText: "",
                 hasSchemeDetails: false,
@@ -132,6 +133,7 @@ sap.ui.define([
             oModel.setProperty("/itemCount", 0);
             oModel.setProperty("/deliveryCount", 0);
             oModel.setProperty("/schemeDetails", null);
+            oModel.setProperty("/schemeType", "");
             this._mDeliveryGroupInfo = {};
             oModel.setProperty("/schemeSelectedText", "");
             oModel.setProperty("/schemeSummaryText", "");
@@ -647,11 +649,28 @@ sap.ui.define([
         // Scheme selection
         // ---------------------------------------------------------------
 
+        onSchemeTypeChange(oEvent) {
+            var oModel = this.getView().getModel();
+            var sType = oEvent.getSource().getSelectedKey();
+            oModel.setProperty("/schemeType", sType);
+            oModel.setProperty("/schemeDetails", null);
+            oModel.setProperty("/schemeSelectedText", "");
+            oModel.setProperty("/schemeSummaryText", "");
+            oModel.setProperty("/hasSchemeDetails", false);
+            this._rebuildBillingItems();
+        },
+
         onSchemeValueHelpRequest() {
             var oView = this.getView();
+            var sSchemeType = oView.getModel().getProperty("/schemeType");
             var sCustomerId = this._getSelectedCustomerId();
 
-            if (!sCustomerId) {
+            if (!sSchemeType) {
+                MessageToast.show("Please select a scheme type first.");
+                return;
+            }
+
+            if (sSchemeType === "advance" && !sCustomerId) {
                 MessageToast.show("Please fetch delivery items first to determine the customer.");
                 return;
             }
@@ -669,10 +688,12 @@ sap.ui.define([
             }
 
             this._pSchemeValueHelpDialog.then(function (oDialog) {
+                oDialog.getModel("schemes").setData([]);
+                oDialog.getBinding("items").filter([]);
                 oDialog.open();
                 oDialog.setBusy(true);
 
-                this._readSchemes(sCustomerId)
+                (sSchemeType === "regular" ? this._readRegularSchemes() : this._readSchemes(sCustomerId))
                     .then(function (aSchemes) {
                         oDialog.getModel("schemes").setData(aSchemes);
                     })
@@ -683,6 +704,32 @@ sap.ui.define([
                         oDialog.setBusy(false);
                     });
             }.bind(this));
+        },
+
+        _readRegularSchemes() {
+            var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
+
+            return fetch(sServiceUri + "regular_scheme", {
+                headers: { "Accept": "application/json" }
+            }).then(function (oResponse) {
+                if (!oResponse.ok) {
+                    throw new Error("HTTP " + oResponse.status);
+                }
+                return oResponse.json();
+            }).then(function (oData) {
+                return ((oData && oData.value) || []).map(function (oRow) {
+                    return {
+                        SrNo: oRow.SrNo,
+                        SchemeName: oRow.SchemeName,
+                        SchemeType: oRow.SchemeType || "REGULAR",
+                        Discount1: (Number(oRow.DisA) || 0) + "%",
+                        Discount2: "0%",
+                        ValidTill: oRow.ValidTill,
+                        AdvAmount: 0,
+                        Currency: "INR"
+                    };
+                });
+            });
         },
 
         _readSchemes(sCustomerId) {
@@ -760,14 +807,24 @@ sap.ui.define([
         },
 
         onSchemeValueHelpConfirm(oEvent) {
-            var oSelectedItem = oEvent.getParameter("selectedItem");
+            var oModel = this.getView().getModel();
+            var bAdvance = oModel.getProperty("/schemeType") === "advance";
+            var aSelectedItems = bAdvance ? (oEvent.getParameter("selectedItems") || []) :
+                [oEvent.getParameter("selectedItem")].filter(Boolean);
 
-            if (!oSelectedItem) {
+            if (!aSelectedItems.length) {
+                oModel.setProperty("/schemeDetails", null);
+                oModel.setProperty("/schemeSelectedText", "");
+                oModel.setProperty("/schemeSummaryText", "");
+                oModel.setProperty("/hasSchemeDetails", false);
+                this._rebuildBillingItems();
                 return;
             }
 
-            var oSchemeDetails = oSelectedItem.getBindingContext("schemes").getObject();
-            var oModel = this.getView().getModel();
+            var aSchemes = aSelectedItems.map(function (oItem) {
+                return oItem.getBindingContext("schemes").getObject();
+            });
+            var oSchemeDetails = bAdvance ? this._combineAdvanceSchemes(aSchemes) : aSchemes[0];
 
             oModel.setProperty("/schemeDetails", oSchemeDetails);
             oModel.setProperty("/schemeSelectedText", oSchemeDetails.SchemeName + " (" + oSchemeDetails.SchemeType + ")");
@@ -777,6 +834,28 @@ sap.ui.define([
             this._rebuildBillingItems();
 
             MessageToast.show("\"" + oSchemeDetails.SchemeName + "\" scheme selected.");
+        },
+
+        _combineAdvanceSchemes(aSchemes) {
+            var fMaxDiscount1 = 0;
+            var fAdvance = 0;
+            var fDiscount2Amount = 0;
+            aSchemes.forEach(function (oScheme) {
+                var fAmount = this._parseAmount(oScheme.AdvAmount);
+                fMaxDiscount1 = Math.max(fMaxDiscount1, this._parsePercent(oScheme.Discount1) * 100);
+                fAdvance += fAmount;
+                fDiscount2Amount += Math.abs(fAmount) * this._parsePercent(oScheme.Discount2);
+            }.bind(this));
+            return {
+                SchemeName: aSchemes.map(function (oScheme) { return oScheme.SchemeName; }).join(", "),
+                SchemeType: "ADVANCE",
+                Discount1: fMaxDiscount1 + "%",
+                Discount2: "0%",
+                Discount2Amount: this._round2(fDiscount2Amount),
+                AdvAmount: this._round2(fAdvance),
+                Currency: aSchemes[0].Currency || "INR",
+                SelectedSchemes: aSchemes
+            };
         },
 
         onSchemeValueHelpCancel(oEvent) {
@@ -798,21 +877,25 @@ sap.ui.define([
         _formatSchemeSummary(oSchemeDetails) {
             oSchemeDetails = oSchemeDetails || {};
 
+            if (String(oSchemeDetails.SchemeType).toUpperCase() === "REGULAR") {
+                return "Scheme: " + oSchemeDetails.SchemeName +
+                    "  |  Type: " + oSchemeDetails.SchemeType +
+                    "  |  Discount 1: " + oSchemeDetails.Discount1 +
+                    "  |  Valid Till: " + (oSchemeDetails.ValidTill || "");
+            }
+
             return "Scheme: " + oSchemeDetails.SchemeName +
                 "  |  Type: " + oSchemeDetails.SchemeType +
                 "  |  Discount 1: " + oSchemeDetails.Discount1 +
-                "  |  Discount 2: " + oSchemeDetails.Discount2 +
+                "  |  Discount 2: " + (oSchemeDetails.SelectedSchemes ?
+                    this._formatAmount(oSchemeDetails.Discount2Amount) + " INR" : oSchemeDetails.Discount2) +
                 "  |  Adv Amount: " + oSchemeDetails.AdvAmount;
         },
 
         // ---------------------------------------------------------------
-        // Billing details (Scheme Name/Type/Dis 1/Dis 2 come from the
-        // selected scheme; the remaining columns are calculated per line:
-        //   Rate After Dis A = Rate - (Rate * Dis1)
-        //   Rate After Dis B = Rate After Dis A - (Rate After Dis A * Dis2)
-        //   Value after Dis B = Rate After Dis B * Qty
-        //   GST Value = Value after Dis B * GST%
-        //   Total = Value after Dis B + GST Value
+        // Advance schemes use the highest Discount 1 and allocate their
+        // Discount 2 amount proportionally to line values after Discount 1.
+        // GST is calculated on the discounted line amount.
         // ---------------------------------------------------------------
 
         _rebuildBillingItems() {
@@ -830,14 +913,45 @@ sap.ui.define([
 
             var fDisc1 = this._parsePercent(oScheme.Discount1);
             var fDisc2 = this._parsePercent(oScheme.Discount2);
+            var bAdvance = !!oScheme.SelectedSchemes;
+            var aValuesAfterDisA = aItems.map(function (oItem) {
+                var fRate = oItem.rate || 0;
+                var fRateAfterDisA = this._round2(fRate - (fRate * fDisc1));
+                return this._round2(fRateAfterDisA * (oItem.quantityinbaseunit || 0));
+            }.bind(this));
+            var fValueAfterDisATotal = this._round2(aValuesAfterDisA.reduce(function (fSum, fValue) {
+                return fSum + fValue;
+            }, 0));
+            // A zero-value line has no share; place any remaining cents on
+            // the last line that contributes to the allocation.
+            var iLastAllocationIndex = -1;
+            aValuesAfterDisA.forEach(function (fValue, iIndex) {
+                if (fValue > 0) {
+                    iLastAllocationIndex = iIndex;
+                }
+            });
+            var fAllocatedDiscount = 0;
 
-            var aBillingItems = aItems.map(function (oItem) {
+            var aBillingItems = aItems.map(function (oItem, iIndex) {
                 var fRate = oItem.rate || 0;
                 var fQty = oItem.quantityinbaseunit || 0;
 
                 var fRateAfterDisA = this._round2(fRate - (fRate * fDisc1));
                 var fRateAfterDisB = this._round2(fRateAfterDisA - (fRateAfterDisA * fDisc2));
                 var fValueAfterDisB = this._round2(fRateAfterDisB * fQty);
+                var fDiscount2Amount = 0;
+                if (bAdvance) {
+                    // Round each share independently; the last contributing
+                    // line receives the remainder so allocations match DIS2.
+                    if (fValueAfterDisATotal > 0 && aValuesAfterDisA[iIndex] > 0) {
+                        fDiscount2Amount = iIndex === iLastAllocationIndex ?
+                            this._round2(oScheme.Discount2Amount - fAllocatedDiscount) :
+                            this._round2(oScheme.Discount2Amount * aValuesAfterDisA[iIndex] / fValueAfterDisATotal);
+                    }
+                    fAllocatedDiscount = this._round2(fAllocatedDiscount + fDiscount2Amount);
+                    fValueAfterDisB = this._round2(aValuesAfterDisA[iIndex] - fDiscount2Amount);
+                    fRateAfterDisB = fQty ? this._round2(fValueAfterDisB / fQty) : 0;
+                }
                 var fGstValue = this._round2(fValueAfterDisB * (GST_RATE_PERCENT / 100));
                 var fTotal = this._round2(fValueAfterDisB + fGstValue);
 
@@ -851,8 +965,12 @@ sap.ui.define([
                     schemeName: oScheme.SchemeName,
                     schemeType: oScheme.SchemeType,
                     discount1: oScheme.Discount1,
-                    discount2: oScheme.Discount2,
+                    discount2: bAdvance ? this._formatAmount(fDiscount2Amount) + " INR" : oScheme.Discount2,
+                    discount2Amount: fDiscount2Amount,
+                    discount2Percent: bAdvance ? (aValuesAfterDisA[iIndex] > 0 ?
+                        fDiscount2Amount / aValuesAfterDisA[iIndex] * 100 : 0) : fDisc2 * 100,
                     rateAfterDisA: fRateAfterDisA,
+                    valueAfterDisA: aValuesAfterDisA[iIndex],
                     rateAfterDisB: fRateAfterDisB,
                     valueAfterDisB: fValueAfterDisB,
                     gstPercent: GST_RATE_PERCENT + "%",
@@ -868,33 +986,8 @@ sap.ui.define([
             oModel.setProperty("/billingItems", aBillingItems);
             oModel.setProperty("/billingTotal", fBillingTotal);
 
-            this._validateSchemeAmount(oScheme, fBillingTotal);
-        },
-
-        // The Post button stays disabled (via /schemeValid) whenever the
-        // billing total exceeds the selected scheme's advance amount -
-        // the user has to pick a different scheme (which re-runs this
-        // check) before they can post.
-        _validateSchemeAmount(oScheme, fBillingTotal) {
-            var oModel = this.getView().getModel();
-            var fAdvAmount = this._parseAmount(oScheme.AdvAmount);
-
-            if (fBillingTotal > fAdvAmount) {
-                oModel.setProperty("/schemeValid", false);
-                oModel.setProperty("/schemeErrorText",
-                    "Total bill (" + this._formatAmount(fBillingTotal) + ") exceeds the selected scheme's advance amount (" +
-                    this._formatAmount(fAdvAmount) + "). Please select a different scheme.");
-
-                MessageBox.error(
-                    "Can't select this scheme - total bill is " + this._formatAmount(fBillingTotal) +
-                    " and the selected scheme's advance amount is " + this._formatAmount(fAdvAmount) +
-                    ".\n\nPlease select a different scheme.",
-                    { title: "Scheme Amount Exceeded" }
-                );
-            } else {
-                oModel.setProperty("/schemeValid", true);
-                oModel.setProperty("/schemeErrorText", "");
-            }
+            oModel.setProperty("/schemeValid", true);
+            oModel.setProperty("/schemeErrorText", "");
         },
 
         _parsePercent(sValue) {
@@ -935,11 +1028,6 @@ sap.ui.define([
 
             if (!aBillingItems.length) {
                 MessageToast.show("Fetch delivery items and select a scheme before posting.");
-                return;
-            }
-
-            if (!oModel.getProperty("/schemeValid")) {
-                MessageToast.show("The billing total exceeds the selected scheme's advance amount. Please select a different scheme.");
                 return;
             }
 
@@ -1000,9 +1088,14 @@ sap.ui.define([
                 }
             });
 
-            var sSchemeType = String(oScheme.SchemeType || "").toUpperCase();
             var fDiscount1 = this._parsePercent(oScheme.Discount1) * 100;
             var fDiscount2 = this._parsePercent(oScheme.Discount2) * 100;
+            if (oScheme.SelectedSchemes) {
+                var fValueBeforeDiscount2 = aBillingItems.reduce(function (fSum, oItem) {
+                    return fSum + oItem.valueAfterDisB + oItem.discount2Amount;
+                }, 0);
+                fDiscount2 = fValueBeforeDiscount2 > 0 ? oScheme.Discount2Amount / fValueBeforeDiscount2 * 100 : 0;
+            }
             var fAdvanceAmount = this._parseAmount(oScheme.AdvAmount);
 
             var fInvoiceTotal = this._round2(aBillingItems.reduce(function (fSum, oBillingItem) {
@@ -1025,12 +1118,12 @@ sap.ui.define([
                     Quantity: oItem.qty,
                     Unit: oItem.unit,
                     Rate: oItem.rate,
-                    SchemeName: oScheme.SchemeName,
-                    SchemeType: sSchemeType,
+                    SchemeName: "",
+                    SchemeType: "",
                     Discount1: fDiscount1,
-                    Discount2: fDiscount2,
+                    Discount2: oScheme.SelectedSchemes ? oBillingItem.discount2Percent : fDiscount2,
                     RateAfterDiscount1: oBillingItem.rateAfterDisA,
-                    RateAfterDiscount2: oBillingItem.rateAfterDisB,
+                    RateAfterDiscount2: "",
                     TaxableAmount: oBillingItem.valueAfterDisB,
                     GSTPercent: GST_RATE_PERCENT,
                     GSTAmount: oBillingItem.gstValue,
@@ -1040,8 +1133,8 @@ sap.ui.define([
             });
 
             return {
-                SchemeName: oScheme.SchemeName,
-                SchemeType: sSchemeType,
+                SchemeName: "",
+                SchemeType: "",
                 BillingDate: this._formatDate(new Date()),
                 Discount1: fDiscount1,
                 Discount2: fDiscount2,
