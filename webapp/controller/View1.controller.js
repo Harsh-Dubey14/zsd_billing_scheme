@@ -1236,6 +1236,7 @@ sap.ui.define([
                     var fAdvance = Math.abs(this._parseAmount(oSelected.AdvAmount));
                     var fDis2 = this._parsePercent(oSelected.Discount2) * 100;
                     return {
+                        accountingdocument: oSelected.AccountingDocument || "",
                         SchemeName: oSelected.SchemeName || "",
                         Discount1Percent: this._parsePercent(oSelected.Discount1) * 100,
                         Discount2Percent: fDis2,
