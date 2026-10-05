@@ -494,12 +494,12 @@
                                         text="{hsnCode}" />
 
                                     <ObjectNumber
-                                        number="{= ${unit}.toUpperCase() === 'BAG' ? ${qty} : ${bag} }" />
+                                        number="{parts: [{path: 'unit'}, {path: 'qty'}, {path: 'bag'}], formatter: '._formatBag'}" />
 
                                     <ObjectNumber
-                                        number="{pack}" />
+                                        number="{path: 'pack', formatter: '._formatAmount'}" />
 
-                                    <Text text="{= ${quantityinbaseunit} + ' ' + ${actualUom} }" />
+                                    <Text text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}" />
 
                                     <ObjectNumber
                                         number="{path: 'rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
@@ -701,14 +701,14 @@
 
                                     <Text text="{srNo}" />
 
-                                    <Text text="{= ${quantityinbaseunit} + ' ' + ${actualUom} }" />
+                                    <Text text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}" />
 
                                     <ObjectNumber
                                         number="{path: 'rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
                                         unit="{transactionCurrency}" />
 
                                     <Text
-                                        text="{discount1}" />
+                                        text="{path: 'discount1', formatter: '._formatPercent'}" />
 
                                     <ObjectNumber
                                         number="{path: 'rateAfterDisA', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
@@ -719,14 +719,14 @@
                                         unit="{transactionCurrency}" />
 
                                     <Text
-                                        text="{discount2}" />
+                                        text="{parts: [{path: 'discount2'}, {path: '/schemeType'}], formatter: '._formatDiscount2'}" />
 
                                     <ObjectNumber
                                         number="{path: 'valueAfterDisB', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
                                         unit="{transactionCurrency}" />
 
                                     <Text
-                                        text="{gstPercent}" />
+                                        text="{path: 'gstPercent', formatter: '._formatPercent'}" />
 
                                     <ObjectNumber
                                         number="{path: 'gstValue', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"

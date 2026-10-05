@@ -1,39 +1,28 @@
-<core:FragmentDefinition
-    xmlns="sap.m"
-    xmlns:core="sap.ui.core">
-
-    <TableSelectDialog
-        id="schemeValueHelpDialog"
-        title="Select Scheme"
-        multiSelect="{= ${/schemeType} === 'advance' }"
-        noDataText="No schemes found."
-        items="{schemes>/}"
-        search=".onSchemeValueHelpSearch"
-        confirm=".onSchemeValueHelpConfirm"
-        cancel=".onSchemeValueHelpCancel">
-
-        <columns>
-            <Column><Text text="Accounting Document" /></Column>
-            <Column><Text text="Scheme Name" /></Column>
-            <Column><Text text="Scheme Type" /></Column>
-            <Column><Text text="Customer Name" /></Column>
-            <Column hAlign="End"><Text text="Discount 1" /></Column>
-            <Column hAlign="End"><Text text="Discount 2" /></Column>
-            <Column hAlign="End"><Text text="Advance Amount" /></Column>
-        </columns>
-
-        <items>
-            <ColumnListItem type="Active">
-                <cells>
-                    <Text text="{schemes>AccountingDocument}" />
-                    <Text text="{schemes>SchemeName}" />
-                    <Text text="{schemes>SchemeType}" />
-                    <Text text="{schemes>CustomerName}" />
-                    <Text text="{schemes>Discount1}" />
-                    <Text text="{schemes>Discount2}" />
-                    <ObjectNumber number="{schemes>AdvAmount}" unit="{schemes>Currency}" />
-                </cells>
-            </ColumnListItem>
-        </items>
-    </TableSelectDialog>
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core"
+    xmlns:vh="sap.ui.comp.valuehelpdialog" xmlns:fb="sap.ui.comp.filterbar">
+    <vh:ValueHelpDialog id="schemeValueHelpDialog" title="Select Scheme"
+        key="ValueHelpKey" descriptionKey="SchemeName" tokenDisplayBehaviour="descriptionOnly"
+        supportMultiselect="{= ${/schemeType} === 'advance' }" supportRanges="false"
+        ok=".onSchemeValueHelpConfirm" cancel=".onSchemeValueHelpCancel">
+        <vh:filterBar>
+            <fb:FilterBar advancedMode="true" filterBarExpanded="true" showGoOnFB="true"
+                showFilterConfiguration="false" showClearOnFB="true"
+                search=".onSchemeValueHelpSearch" clear=".onSchemeValueHelpClear">
+                <fb:filterGroupItems>
+                    <fb:FilterGroupItem name="AccountingDocument" label="Accounting Document" groupName="Scheme" visibleInFilterBar="true" visible="{= ${/schemeType} !== 'regular' }">
+                        <fb:control><Input id="schemeFilterAccountingDocument" submit=".onSchemeValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="SchemeName" label="Scheme Name" groupName="Scheme" visibleInFilterBar="true">
+                        <fb:control><Input id="schemeFilterSchemeName" submit=".onSchemeValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="SchemeType" label="Scheme Type" groupName="Scheme" visibleInFilterBar="true">
+                        <fb:control><Input id="schemeFilterSchemeType" submit=".onSchemeValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="CustomerName" label="Customer Name" groupName="Scheme" visibleInFilterBar="true" visible="{= ${/schemeType} !== 'regular' }">
+                        <fb:control><Input id="schemeFilterCustomerName" submit=".onSchemeValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                </fb:filterGroupItems>
+            </fb:FilterBar>
+        </vh:filterBar>
+    </vh:ValueHelpDialog>
 </core:FragmentDefinition>

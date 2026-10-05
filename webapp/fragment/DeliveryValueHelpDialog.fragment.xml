@@ -1,37 +1,31 @@
-<core:FragmentDefinition
-    xmlns="sap.m"
-    xmlns:core="sap.ui.core">
-
-    <TableSelectDialog
-        id="deliveryValueHelpDialog"
-        title="Select Delivery Document(s)"
-        noDataText="No delivery documents found."
-        multiSelect="true"
-        growing="true"
-        growingScrollToLoad="true"
-        items="{path: 'deliveryService>/delivery_vh'}"
-        search=".onDeliveryValueHelpSearch"
-        confirm=".onDeliveryValueHelpConfirm"
-        cancel=".onDeliveryValueHelpCancel">
-
-        <columns>
-            <Column><Text text="Delivery Document" /></Column>
-            <Column><Text text="Plant" /></Column>
-            <Column><Text text="Plant Name" /></Column>
-            <Column><Text text="Customer" /></Column>
-            <Column><Text text="Customer Name" /></Column>
-        </columns>
-
-        <items>
-            <ColumnListItem type="Active">
-                <cells>
-                    <Text text="{path: 'deliveryService>DeliveryDocument', formatter: '.formatDeliveryDocument'}" />
-                    <Text text="{deliveryService>Plant}" />
-                    <Text text="{deliveryService>PlantName}" />
-                    <Text text="{deliveryService>Customer}" />
-                    <Text text="{deliveryService>FullName}" />
-                </cells>
-            </ColumnListItem>
-        </items>
-    </TableSelectDialog>
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core"
+    xmlns:vh="sap.ui.comp.valuehelpdialog" xmlns:fb="sap.ui.comp.filterbar">
+    <vh:ValueHelpDialog id="deliveryValueHelpDialog" title="Delivery Document"
+        key="DeliveryDocument" descriptionKey="DeliveryDocument"
+        tokenDisplayBehaviour="idOnly" supportMultiselect="true" supportRanges="false"
+        ok=".onDeliveryValueHelpConfirm" cancel=".onDeliveryValueHelpCancel">
+        <vh:filterBar>
+            <fb:FilterBar id="deliveryValueHelpFilterBar" advancedMode="true"
+                filterBarExpanded="true" showGoOnFB="true" showFilterConfiguration="false"
+                showClearOnFB="true" search=".onDeliveryValueHelpSearch" clear=".onDeliveryValueHelpClear">
+                <fb:filterGroupItems>
+                    <fb:FilterGroupItem name="DeliveryDocument" label="Delivery Document" groupName="Delivery" visibleInFilterBar="true">
+                        <fb:control><Input id="deliveryFilterDeliveryDocument" submit=".onDeliveryValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="Plant" label="Plant" groupName="Delivery" visibleInFilterBar="true">
+                        <fb:control><Input id="deliveryFilterPlant" submit=".onDeliveryValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="PlantName" label="Plant Name" groupName="Delivery" visibleInFilterBar="true">
+                        <fb:control><Input id="deliveryFilterPlantName" submit=".onDeliveryValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="Customer" label="Customer" groupName="Delivery" visibleInFilterBar="true">
+                        <fb:control><Input id="deliveryFilterCustomer" submit=".onDeliveryValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                    <fb:FilterGroupItem name="FullName" label="Customer Name" groupName="Delivery" visibleInFilterBar="true">
+                        <fb:control><Input id="deliveryFilterFullName" submit=".onDeliveryValueHelpSearch" /></fb:control>
+                    </fb:FilterGroupItem>
+                </fb:filterGroupItems>
+            </fb:FilterBar>
+        </vh:filterBar>
+    </vh:ValueHelpDialog>
 </core:FragmentDefinition>

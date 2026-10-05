@@ -8,8 +8,13 @@ sap.ui.define([
     "sap/m/Token",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
-    "sap/m/GroupHeaderListItem"
-], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem) => {
+    "sap/m/GroupHeaderListItem",
+    "sap/ui/table/Column",
+    "sap/m/Label",
+    "sap/m/Text",
+    "sap/m/Column",
+    "sap/m/ColumnListItem"
+], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem, TableColumn, Label, Text, MobileColumn, ColumnListItem) => {
     "use strict";
 
     return Controller.extend("com.zeel.billingscheme.billingscheme.controller.View1", {
@@ -234,170 +239,157 @@ sap.ui.define([
         // Delivery number F4 value help
         // ---------------------------------------------------------------
 
+        _configureValueHelpTable(oDialog, oTable, sModel, sPath, aFields) {
+            oTable.setModel(oDialog.getModel(sModel), sModel);
+            // ValueHelpDialog also reads row contexts through the default model.
+            oTable.setModel(oDialog.getModel(sModel));
+            if (!oTable.data("selectionRestoreAttached")) {
+                oTable.data("selectionRestoreAttached", true);
+                oDialog.attachUpdateSelection(function (oEvent) {
+                    this._restoreValueHelpSelection(oDialog, oTable, oEvent.getParameter("tokenKeys"));
+                }, this);
+                if (oTable.attachRowsUpdated) {
+                    oTable.attachRowsUpdated(function () { oDialog.update(); });
+                } else {
+                    oTable.attachUpdateFinished(function () { oDialog.update(); });
+                }
+            }
+            oTable.destroyColumns();
+            var fnCell = function (aField) {
+                return new Text({ text: { path: aField[0],
+                    formatter: aField[3] ? aField[3].bind(this) : undefined } });
+            }.bind(this);
+            aFields.forEach(function (aField) {
+                if (oTable.bindRows) {
+                    oTable.addColumn(new TableColumn({ label: new Label({ text: aField[1] }),
+                        template: fnCell(aField), width: aField[2], sortProperty: aField[0] }));
+                } else {
+                    oTable.addColumn(new MobileColumn({ header: new Label({ text: aField[1] }), width: aField[2] }));
+                }
+            });
+            if (oTable.bindRows) {
+                oTable.bindRows({ path: sPath });
+            } else {
+                oTable.bindItems({ path: sPath, templateShareable: false,
+                    template: new ColumnListItem({ cells: aFields.map(fnCell) }) });
+            }
+            (oTable.getBinding("rows") || oTable.getBinding("items")).attachDataReceived(function () { oDialog.update(); });
+        },
+
+        _restoreValueHelpSelection(oDialog, oTable, aKeys) {
+            var sKeyField = oDialog.getKey();
+            var fnKey = function (vKey) {
+                var sKey = String(vKey == null ? "" : vKey);
+                return sKeyField === "DeliveryDocument" ? sKey.replace(/^0+(?=\d)/, "") : sKey;
+            };
+            var oKeys = new Set((aKeys || []).map(fnKey));
+            if (oTable.bindRows) {
+                var oBinding = oTable.getBinding("rows");
+                oTable.clearSelection();
+                if (!oBinding) { return; }
+                // OData V4 has no aKeys/aIndices for the dialog's default update logic.
+                oBinding.getCurrentContexts().forEach(function (oContext, iIndex) {
+                    if (oContext && oKeys.has(fnKey(oContext.getProperty(sKeyField)))) {
+                        var iRow = oContext.getIndex ? oContext.getIndex() : iIndex;
+                        oTable.addSelectionInterval(iRow, iRow);
+                    }
+                });
+            } else {
+                oTable.getItems().forEach(function (oItem) {
+                    var oContext = oItem.getBindingContext();
+                    oTable.setSelectedItem(oItem, !!oContext && oKeys.has(fnKey(oContext.getProperty(sKeyField))));
+                });
+            }
+        },
+
+        _filterValueHelp(sPrefix, aFields, oTable) {
+            var aFilters = aFields.map(function (sField) {
+                var sValue = this.byId(sPrefix + "Filter" + sField).getValue().trim();
+                return sValue ? new Filter(sField, FilterOperator.Contains, sValue) : null;
+            }.bind(this)).filter(Boolean);
+            (oTable.getBinding("rows") || oTable.getBinding("items")).filter(aFilters);
+            this.byId(sPrefix + "ValueHelpDialog").update();
+        },
+
+        _clearValueHelpFilters(sPrefix, aFields) {
+            aFields.forEach(function (sField) { this.byId(sPrefix + "Filter" + sField).setValue(""); }.bind(this));
+        },
+
         onDeliveryValueHelpRequest() {
             var oView = this.getView();
-
             if (!this._pDeliveryValueHelpDialog) {
-                this._pDeliveryValueHelpDialog = Fragment.load({
-                    id: oView.getId(),
-                    name: "com.zeel.billingscheme.billingscheme.fragment.DeliveryValueHelpDialog",
-                    controller: this
+                this._pDeliveryValueHelpDialog = Fragment.load({ id: oView.getId(),
+                    name: "com.zeel.billingscheme.billingscheme.fragment.DeliveryValueHelpDialog", controller: this
                 }).then(function (oDialog) {
                     oView.addDependent(oDialog);
-                    this._attachDeliverySelectionGuard(oDialog);
-                    return oDialog;
+                    return oDialog.getTableAsync().then(function (oTable) {
+                        this._oDeliveryValueHelpTable = oTable;
+                        this._configureValueHelpTable(oDialog, oTable, "deliveryService", "/delivery_vh", [
+                            ["DeliveryDocument", "Delivery Document", "20%"], ["Plant", "Plant", "12%"],
+                            ["PlantName", "Plant Name", "24%"], ["Customer", "Customer", "16%"],
+                            ["FullName", "Customer Name", "28%"]
+                        ]);
+                        return oDialog;
+                    }.bind(this));
                 }.bind(this));
             }
-
             this._pDeliveryValueHelpDialog.then(function (oDialog) {
-                this._sDeliveryValueHelpAnchorFullName = null;
+                // The input is the committed selection; dialog edits are discarded on Cancel.
+                oDialog.setTokens(this.byId("deliveryInput").getTokens().map(function (oToken) {
+                    var sKey = oToken.getKey().replace(/^0+(?=\d)/, "");
+                    return new Token({ key: sKey, text: oToken.getText() });
+                }));
+                this.onDeliveryValueHelpSearch();
                 oDialog.open();
+                oDialog.update();
             }.bind(this));
         },
 
-        // TableSelectDialog doesn't expose its multi-select checkbox toggles
-        // as a public event, so this reaches into its internal list (a plain
-        // sap.m.Table, exposed as `_oList` since the control's introduction)
-        // to enforce "one customer's deliveries at a time": the first row
-        // checked fixes the customer (by FullName) for the rest of this
-        // dialog session - any row belonging to a different customer is
-        // immediately unchecked again, and the customer resets once every
-        // row is deselected.
-        _attachDeliverySelectionGuard(oDialog) {
-            var oList = oDialog._oList;
+        onDeliveryValueHelpSearch() {
+            this._filterValueHelp("delivery", ["DeliveryDocument", "Plant", "PlantName", "Customer", "FullName"], this._oDeliveryValueHelpTable);
+        },
 
-            if (!oList) {
-                return;
-            }
+        onDeliveryValueHelpClear() {
+            this._clearValueHelpFilters("delivery", ["DeliveryDocument", "Plant", "PlantName", "Customer", "FullName"]);
+            this.onDeliveryValueHelpSearch();
+        },
 
-            oList.attachSelectionChange(function (oEvent) {
-                if (oEvent.getParameter("selectAll")) {
-                    this._enforceDeliverySelectionGuard(oList);
-                    return;
-                }
-
-                var oListItem = oEvent.getParameter("listItem");
-                var bSelected = oEvent.getParameter("selected");
-
-                if (!oListItem || !bSelected) {
-                    if (!oList.getSelectedItems().length) {
-                        this._sDeliveryValueHelpAnchorFullName = null;
+        async onDeliveryValueHelpConfirm(oEvent) {
+            var oDialog = oEvent.getSource();
+            var aValues = (oEvent.getParameter("tokens") || []).map(function (oToken) { return oToken.getKey(); });
+            var oBinding;
+            oDialog.setBusy(true);
+            try {
+                if (aValues.length) {
+                    oBinding = this.getView().getModel("deliveryService").bindList("/delivery_vh", null, null,
+                        [new Filter({ filters: aValues.map(function (sValue) {
+                            return new Filter("DeliveryDocument", FilterOperator.EQ, sValue);
+                        }), and: false })]);
+                    var aContexts = await oBinding.requestContexts(0, aValues.length);
+                    var aRows = aContexts.map(function (oContext) { return oContext.getObject(); });
+                    if (aRows.length !== aValues.length) {
+                        MessageBox.error("Please select valid delivery documents.");
+                        return;
                     }
-                    return;
+                    if (aRows.some(function (oRow) { return (oRow.FullName || "") !== (aRows[0].FullName || ""); })) {
+                        MessageBox.error("Please select delivery numbers for a single customer only.");
+                        return;
+                    }
                 }
-
-                var sFullName = oListItem.getBindingContext("deliveryService").getObject().FullName || "";
-
-                if (this._sDeliveryValueHelpAnchorFullName === null) {
-                    this._sDeliveryValueHelpAnchorFullName = sFullName;
-                    return;
-                }
-
-                if (sFullName !== this._sDeliveryValueHelpAnchorFullName) {
-                    oList.setSelectedItem(oListItem, false);
-                    MessageToast.show(this._getDeliverySelectionGuardMessage());
-                }
-            }, this);
-        },
-
-        _enforceDeliverySelectionGuard(oList) {
-            var aSelected = oList.getSelectedItems();
-
-            if (!aSelected.length) {
-                this._sDeliveryValueHelpAnchorFullName = null;
-                return;
+                this.byId("deliveryInput").removeAllTokens();
+                this._addDeliveryNumbers(aValues.map(function (sValue) { return String(sValue).padStart(10, "0"); }));
+                this._syncDeliveryState();
+                oDialog.close();
+            } catch (oError) {
+                MessageBox.error("Could not validate deliveries: " + oError.message);
+            } finally {
+                oDialog.setBusy(false);
+                if (oBinding) { oBinding.destroy(); }
             }
-
-            var sAnchor = this._sDeliveryValueHelpAnchorFullName;
-
-            if (sAnchor === null) {
-                sAnchor = aSelected[0].getBindingContext("deliveryService").getObject().FullName || "";
-                this._sDeliveryValueHelpAnchorFullName = sAnchor;
-            }
-
-            var iRemoved = 0;
-
-            aSelected.forEach(function (oListItem) {
-                var sFullName = oListItem.getBindingContext("deliveryService").getObject().FullName || "";
-
-                if (sFullName !== sAnchor) {
-                    oList.setSelectedItem(oListItem, false);
-                    iRemoved++;
-                }
-            });
-
-            if (iRemoved) {
-                MessageToast.show(this._getDeliverySelectionGuardMessage());
-            }
-        },
-
-        _getDeliverySelectionGuardMessage() {
-            return "Only delivery numbers for the same customer can be selected together" +
-                (this._sDeliveryValueHelpAnchorFullName ? " (" + this._sDeliveryValueHelpAnchorFullName + ")" : "") +
-                ". Deselect all to pick a different customer.";
-        },
-
-        onDeliveryValueHelpSearch(oEvent) {
-            var sQuery = oEvent.getParameter("value") || "";
-            var oBinding = oEvent.getSource().getBinding("items");
-
-            oBinding.filter(sQuery ? [
-                new Filter({
-                    filters: [
-                        new Filter("DeliveryDocument", FilterOperator.Contains, sQuery),
-                        new Filter("FullName", FilterOperator.Contains, sQuery),
-                        new Filter("Customer", FilterOperator.Contains, sQuery)
-                    ],
-                    and: false
-                })
-            ] : []);
-        },
-
-        onDeliveryValueHelpConfirm(oEvent) {
-            var aSelectedContexts = oEvent.getParameter("selectedContexts") || [];
-
-            this._sDeliveryValueHelpAnchorFullName = null;
-
-            if (!aSelectedContexts.length) {
-                return;
-            }
-
-            var aRows = aSelectedContexts.map(function (oContext) {
-                return oContext.getObject();
-            });
-
-            // Safety net in case the live selection guard couldn't attach
-            // (e.g. a future UI5 version drops the internal `_oList`) -
-            // still refuse a mixed-customer selection at confirm time.
-            var sFullName = aRows[0].FullName || "";
-            var bMixedCustomers = aRows.some(function (oRow) {
-                return (oRow.FullName || "") !== sFullName;
-            });
-
-            if (bMixedCustomers) {
-                MessageBox.error("Selected delivery numbers belong to different customers. Please select delivery numbers for a single customer only.");
-                return;
-            }
-
-            var aValues = aRows.map(function (oRow) {
-                return String(oRow.DeliveryDocument || "").padStart(10, "0");
-            });
-
-            var iAdded = this._addDeliveryNumbers(aValues);
-
-            this._syncDeliveryState();
-
-            MessageToast.show(iAdded + " delivery number(s) added.");
         },
 
         onDeliveryValueHelpCancel(oEvent) {
-            var oBinding = oEvent.getSource().getBinding("items");
-
-            this._sDeliveryValueHelpAnchorFullName = null;
-
-            if (oBinding) {
-                oBinding.filter([]);
-            }
+            oEvent.getSource().close();
         },
 
         formatDeliveryDocument(sValue) {
@@ -645,6 +637,7 @@ sap.ui.define([
 
             this._mDeliveryGroupInfo = mGroupInfo;
 
+            // eslint-disable-next-line complexity
             var aItems = (aRawRows || []).map(function (oRow) {
                 var sDeliveryNumber = String(oRow.DeliveryDocument || "").padStart(10, "0");
 
@@ -681,6 +674,7 @@ sap.ui.define([
                 if (a.deliveryNumber !== b.deliveryNumber) {
                     return a.deliveryNumber < b.deliveryNumber ? -1 : 1;
                 }
+                // eslint-disable-next-line no-nested-ternary
                 return a.deliveryDocumentItem < b.deliveryDocumentItem ? -1 :
                     a.deliveryDocumentItem > b.deliveryDocumentItem ? 1 : 0;
             });
@@ -751,20 +745,37 @@ sap.ui.define([
                 }).then(function (oDialog) {
                     oView.addDependent(oDialog);
                     oDialog.setModel(new JSONModel([]), "schemes");
-                    return oDialog;
-                });
+                    return oDialog.getTableAsync().then(function (oTable) {
+                        this._oSchemeValueHelpTable = oTable;
+                        return oDialog;
+                    }.bind(this));
+                }.bind(this));
             }
 
             this._pSchemeValueHelpDialog.then(function (oDialog) {
                 oDialog.getModel("schemes").setData([]);
-                oDialog.getBinding("items").filter([]);
+                oDialog.setTokens([]);
+                this._configureSchemeValueHelpTable(oDialog, sSchemeType);
+                this.onSchemeValueHelpClear();
                 oDialog.open();
                 oDialog.setBusy(true);
 
                 (sSchemeType === "regular" ? this._readRegularSchemes() : this._readSchemes(sCustomerId))
                     .then(function (aSchemes) {
+                        aSchemes = aSchemes.map(function (oScheme) {
+                            return Object.assign({}, oScheme, { ValueHelpKey: this._getSchemeValueHelpKey(oScheme) });
+                        }.bind(this));
                         oDialog.getModel("schemes").setData(aSchemes);
-                    })
+                        var oDetails = oView.getModel().getProperty("/schemeDetails");
+                        var aSelected = oDetails ? (oDetails.SelectedSchemes || [oDetails]) : [];
+                        var aKeys = aSelected.map(this._getSchemeValueHelpKey.bind(this));
+                        oDialog.setTokens(aSchemes.filter(function (oScheme) {
+                            return aKeys.indexOf(oScheme.ValueHelpKey) !== -1;
+                        }).map(function (oScheme) {
+                            return new Token({ key: oScheme.ValueHelpKey, text: oScheme.SchemeName });
+                        }));
+                        oDialog.update();
+                    }.bind(this))
                     .catch(function (oError) {
                         MessageBox.error("Could not fetch schemes: " + (oError && oError.message ? oError.message : oError));
                     })
@@ -859,30 +870,48 @@ sap.ui.define([
             });
         },
 
-        onSchemeValueHelpSearch(oEvent) {
-            var sQuery = oEvent.getParameter("value") || "";
-            var oBinding = oEvent.getSource().getBinding("items");
+        _getSchemeValueHelpKey(oScheme) {
+            return JSON.stringify([oScheme.SrNo, oScheme.SchemeId, oScheme.AccountingDocument,
+                oScheme.AccountingDocumentItem, oScheme.SchemeName, oScheme.SchemeType]);
+        },
 
-            oBinding.filter(sQuery ? [
-                new Filter({
-                    filters: [
-                        new Filter("SchemeName", FilterOperator.Contains, sQuery),
-                        new Filter("SchemeType", FilterOperator.Contains, sQuery),
-                        new Filter("AccountingDocument", FilterOperator.Contains, sQuery),
-                        new Filter("CustomerName", FilterOperator.Contains, sQuery)
-                    ],
-                    and: false
-                })
-            ] : []);
+        _configureSchemeValueHelpTable(oDialog, sType) {
+            var aFields = sType === "regular" ? [
+                ["SchemeName", "Scheme Name", "44%"], ["SchemeType", "Scheme Type", "20%"],
+                ["Discount1", "Discount 1", "18%", this._formatPercent],
+                ["Discount2", "Discount 2", "18%", this._formatPercent]
+            ] : [
+                ["AccountingDocument", "Accounting Document", "18%"], ["SchemeName", "Scheme Name", "23%"],
+                ["SchemeType", "Scheme Type", "12%"], ["CustomerName", "Customer Name", "20%"],
+                ["Discount1", "Discount 1", "8%", this._formatPercent],
+                ["Discount2", "Discount 2", "8%", this._formatPercent],
+                ["AdvAmount", "Advance Amount", "11%", this._formatAmount]
+            ];
+            this._configureValueHelpTable(oDialog, this._oSchemeValueHelpTable, "schemes", "/", aFields);
+        },
+
+        onSchemeValueHelpSearch() {
+            var aFields = this.getView().getModel().getProperty("/schemeType") === "regular" ?
+                ["SchemeName", "SchemeType"] : ["SchemeName", "SchemeType", "AccountingDocument", "CustomerName"];
+            this._filterValueHelp("scheme", aFields, this._oSchemeValueHelpTable);
+        },
+
+        onSchemeValueHelpClear() {
+            this._clearValueHelpFilters("scheme", ["SchemeName", "SchemeType", "AccountingDocument", "CustomerName"]);
+            this.onSchemeValueHelpSearch();
         },
 
         onSchemeValueHelpConfirm(oEvent) {
             var oModel = this.getView().getModel();
             var bAdvance = oModel.getProperty("/schemeType") === "advance";
-            var aSelectedItems = bAdvance ? (oEvent.getParameter("selectedItems") || []) :
-                [oEvent.getParameter("selectedItem")].filter(Boolean);
+            var oDialog = oEvent.getSource();
+            var aAvailable = oDialog.getModel("schemes").getData();
+            var aSchemes = (oEvent.getParameter("tokens") || []).map(function (oToken) {
+                return aAvailable.find(function (oScheme) { return oScheme.ValueHelpKey === oToken.getKey(); });
+            }).filter(Boolean);
+            oDialog.close();
 
-            if (!aSelectedItems.length) {
+            if (!aSchemes.length) {
                 oModel.setProperty("/schemeDetails", null);
                 oModel.setProperty("/schemeSelectedText", "");
                 oModel.setProperty("/schemeSummaryText", "");
@@ -891,9 +920,6 @@ sap.ui.define([
                 return;
             }
 
-            var aSchemes = aSelectedItems.map(function (oItem) {
-                return oItem.getBindingContext("schemes").getObject();
-            });
             var oSchemeDetails = bAdvance ? this._combineAdvanceSchemes(aSchemes) : aSchemes[0];
 
             oModel.setProperty("/schemeDetails", oSchemeDetails);
@@ -929,11 +955,7 @@ sap.ui.define([
         },
 
         onSchemeValueHelpCancel(oEvent) {
-            var oBinding = oEvent.getSource().getBinding("items");
-
-            if (oBinding) {
-                oBinding.filter([]);
-            }
+            oEvent.getSource().close();
         },
 
         _getSelectedCustomerId() {
@@ -945,21 +967,22 @@ sap.ui.define([
         },
 
         _formatSchemeSummary(oSchemeDetails) {
+            // eslint-disable-next-line no-param-reassign
             oSchemeDetails = oSchemeDetails || {};
 
             if (String(oSchemeDetails.SchemeType).toUpperCase() === "REGULAR") {
                 return "Scheme: " + oSchemeDetails.SchemeName +
                     "  |  Type: " + oSchemeDetails.SchemeType +
-                    "  |  Discount 1: " + oSchemeDetails.Discount1 +
+                    "  |  Discount 1: " + this._formatPercent(oSchemeDetails.Discount1) +
                     "  |  Valid Till: " + (oSchemeDetails.ValidTill || "");
             }
 
             return "Scheme: " + oSchemeDetails.SchemeName +
                 "  |  Type: " + oSchemeDetails.SchemeType +
-                "  |  Discount 1: " + oSchemeDetails.Discount1 +
+                "  |  Discount 1: " + this._formatPercent(oSchemeDetails.Discount1) +
                 "  |  Discount 2: " + (oSchemeDetails.SelectedSchemes ?
-                    this._formatAmount(oSchemeDetails.Discount2Amount) + " " + (this.getView().getModel().getProperty("/transactionCurrency") || "") : oSchemeDetails.Discount2) +
-                "  |  Adv Amount: " + oSchemeDetails.AdvAmount;
+                    this._formatAmount(oSchemeDetails.Discount2Amount) + " " + (this.getView().getModel().getProperty("/transactionCurrency") || "") : this._formatPercent(oSchemeDetails.Discount2)) +
+                "  |  Adv Amount: " + this._formatAmount(oSchemeDetails.AdvAmount);
         },
 
         // ---------------------------------------------------------------
@@ -1040,6 +1063,7 @@ sap.ui.define([
                     transactionCurrency: oItem.transactionCurrency || "",
                     discount2: bAdvance ? this._formatAmount(fDiscount2Amount) + " " + (oItem.transactionCurrency || "") : oScheme.Discount2,
                     discount2Amount: fDiscount2Amount,
+                    // eslint-disable-next-line no-nested-ternary
                     discount2Percent: bAdvance ? (aValuesAfterDisA[iIndex] > 0 ?
                         fDiscount2Amount / aValuesAfterDisA[iIndex] * 100 : 0) : fDisc2 * 100,
                     rateAfterDisA: fRateAfterDisA,
@@ -1081,7 +1105,23 @@ sap.ui.define([
         },
 
         _formatAmount(fValue) {
-            return (fValue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return this._parseAmount(fValue).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
+
+        _formatPercent(sValue) {
+            return this._formatAmount(this._parsePercent(sValue) * 100) + "%";
+        },
+
+        _formatQuantity(fQuantity, sUnit) {
+            return this._formatAmount(fQuantity) + (sUnit ? " " + sUnit : "");
+        },
+
+        _formatBag(sUnit, fQuantity, fBag) {
+            return this._formatAmount(String(sUnit || "").toUpperCase() === "BAG" ? fQuantity : fBag);
+        },
+
+        _formatDiscount2(sValue, sSchemeType) {
+            return sSchemeType === "advance" ? sValue : this._formatPercent(sValue);
         },
 
         _formatDate(oDate) {
@@ -1137,6 +1177,7 @@ sap.ui.define([
         // response body's own Status/Message, not the HTTP status code, so
         // that's what drives the success/error box.
         _showSchemeBillingResult(oResult) {
+            // eslint-disable-next-line no-param-reassign
             oResult = oResult || {};
             var sStatus = String(oResult.ProcessStatus || "UNKNOWN").toUpperCase();
             var aLines = ["Status: " + sStatus];
@@ -1294,6 +1335,7 @@ sap.ui.define([
                     (oBody.error && oBody.error.message && oBody.error.message.value) ||
                     (oBody.error && oBody.error.message) ||
                     sText;
+            // eslint-disable-next-line no-unused-vars
             } catch (e) {
                 return sText;
             }
