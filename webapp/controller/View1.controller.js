@@ -302,10 +302,10 @@ sap.ui.define([
             }
         },
 
-        _filterValueHelp(sPrefix, aFields, oTable) {
+        _filterValueHelp(sPrefix, aFields, oTable, mOperators) {
             var aFilters = aFields.map(function (sField) {
                 var sValue = this.byId(sPrefix + "Filter" + sField).getValue().trim();
-                return sValue ? new Filter(sField, FilterOperator.Contains, sValue) : null;
+                return sValue ? new Filter(sField, (mOperators && mOperators[sField]) || FilterOperator.Contains, sValue) : null;
             }.bind(this)).filter(Boolean);
             (oTable.getBinding("rows") || oTable.getBinding("items")).filter(aFilters);
             this.byId(sPrefix + "ValueHelpDialog").update();
@@ -854,6 +854,7 @@ sap.ui.define([
                         SchemeId: oRow.SchemeId || "",
                         AccountingDocument: oRow.AccountingDocument,
                         AccountingDocumentItem: oRow.AccountingDocumentItem,
+                        PostingDate: oRow.PostingDate || "",
                         SchemeName: oRow.SchemeName,
                         SchemeType: oRow.scheme_type,
                         Discount1: oRow.DiscountA + "%",
@@ -877,12 +878,12 @@ sap.ui.define([
 
         _configureSchemeValueHelpTable(oDialog, sType) {
             var aFields = sType === "regular" ? [
-                ["SchemeName", "Scheme Name", "44%"], ["SchemeType", "Scheme Type", "20%"],
+                ["SchemeName", "Scheme Name", "64%"],
                 ["Discount1", "Discount 1", "18%", this._formatPercent],
                 ["Discount2", "Discount 2", "18%", this._formatPercent]
             ] : [
-                ["AccountingDocument", "Accounting Document", "18%"], ["SchemeName", "Scheme Name", "23%"],
-                ["SchemeType", "Scheme Type", "12%"], ["CustomerName", "Customer Name", "20%"],
+                ["AccountingDocument", "Accounting Document", "24%"], ["SchemeName", "Scheme Name", "34%"],
+                ["PostingDate", "Posting Date", "15%"],
                 ["Discount1", "Discount 1", "8%", this._formatPercent],
                 ["Discount2", "Discount 2", "8%", this._formatPercent],
                 ["AdvAmount", "Advance Amount", "11%", this._formatAmount]
@@ -891,13 +892,26 @@ sap.ui.define([
         },
 
         onSchemeValueHelpSearch() {
-            var aFields = this.getView().getModel().getProperty("/schemeType") === "regular" ?
-                ["SchemeName", "SchemeType"] : ["SchemeName", "SchemeType", "AccountingDocument", "CustomerName"];
-            this._filterValueHelp("scheme", aFields, this._oSchemeValueHelpTable);
+            var bAdvance = this.getView().getModel().getProperty("/schemeType") === "advance";
+            var oDatePicker = this.byId("schemeFilterPostingDate");
+            if (bAdvance && oDatePicker.getValue() && !oDatePicker.getDateValue()) {
+                MessageToast.show("Please select a valid posting date.");
+                return;
+            }
+            var aFields = bAdvance ? ["SchemeName", "AccountingDocument", "PostingDate"] : ["SchemeName"];
+            this._filterValueHelp("scheme", aFields, this._oSchemeValueHelpTable, { PostingDate: FilterOperator.EQ });
+        },
+
+        onSchemePostingDateChange(oEvent) {
+            if (!oEvent.getParameter("valid")) {
+                MessageToast.show("Please select a valid posting date.");
+                return;
+            }
+            this.onSchemeValueHelpSearch();
         },
 
         onSchemeValueHelpClear() {
-            this._clearValueHelpFilters("scheme", ["SchemeName", "SchemeType", "AccountingDocument", "CustomerName"]);
+            this._clearValueHelpFilters("scheme", ["SchemeName", "AccountingDocument", "PostingDate"]);
             this.onSchemeValueHelpSearch();
         },
 
@@ -933,25 +947,46 @@ sap.ui.define([
         },
 
         _combineAdvanceSchemes(aSchemes) {
+            aSchemes = aSchemes.slice().sort(function (oFirst, oSecond) {
+                // ISO posting dates sort chronologically; undated schemes go last.
+                return String(oFirst.PostingDate || "9999-12-31").localeCompare(String(oSecond.PostingDate || "9999-12-31"));
+            });
             var fMaxDiscount1 = 0;
             var fAdvance = 0;
-            var fDiscount2Amount = 0;
             aSchemes.forEach(function (oScheme) {
                 var fAmount = this._parseAmount(oScheme.AdvAmount);
                 fMaxDiscount1 = Math.max(fMaxDiscount1, this._parsePercent(oScheme.Discount1) * 100);
                 fAdvance += fAmount;
-                fDiscount2Amount += Math.abs(fAmount) * this._parsePercent(oScheme.Discount2);
             }.bind(this));
             return {
                 SchemeName: aSchemes.map(function (oScheme) { return oScheme.SchemeName; }).join(", "),
                 SchemeType: "ADVANCE",
                 Discount1: fMaxDiscount1 + "%",
                 Discount2: "0%",
-                Discount2Amount: this._round2(fDiscount2Amount),
+                Discount2Amount: 0,
                 AdvAmount: this._round2(fAdvance),
                 Currency: aSchemes[0].Currency || "INR",
                 SelectedSchemes: aSchemes
             };
+        },
+
+        _calculateAdvanceDiscount2(aSchemes, fValueAfterDisA) {
+            var fRemaining = Math.max(0, this._round2(fValueAfterDisA));
+            var fTotalDiscount = 0;
+            var aCalculations = aSchemes.map(function (oScheme, iIndex) {
+                var fAdvance = Math.abs(this._parseAmount(oScheme.AdvAmount));
+                var fDiscount = 0;
+                if (fRemaining > 0 && fAdvance > 0) {
+                    // Earlier schemes consume up to their advance; the final
+                    // scheme discounts and consumes the entire remaining value.
+                    var fConsumed = iIndex === aSchemes.length - 1 ? fRemaining : Math.min(fRemaining, fAdvance);
+                    fDiscount = this._round2(fConsumed * this._parsePercent(oScheme.Discount2));
+                    fRemaining = this._round2(fRemaining - fConsumed);
+                }
+                fTotalDiscount = this._round2(fTotalDiscount + fDiscount);
+                return { CalculatedDiscount2Amount: fDiscount };
+            }.bind(this));
+            return { Discount2Amount: fTotalDiscount, SchemeCalculations: aCalculations };
         },
 
         onSchemeValueHelpCancel(oEvent) {
@@ -986,8 +1021,8 @@ sap.ui.define([
         },
 
         // ---------------------------------------------------------------
-        // Advance schemes use the highest Discount 1 and allocate their
-        // Discount 2 amount proportionally to line values after Discount 1.
+        // Advance schemes use the highest Discount 1, calculate Discount 2
+        // in posting-date FIFO order, then allocate it proportionally.
         // GST is calculated on the discounted line amount.
         // ---------------------------------------------------------------
 
@@ -1016,6 +1051,13 @@ sap.ui.define([
             var fValueAfterDisATotal = this._round2(aValuesAfterDisA.reduce(function (fSum, fValue) {
                 return fSum + fValue;
             }, 0));
+            if (bAdvance) {
+                var oFifo = this._calculateAdvanceDiscount2(oScheme.SelectedSchemes, fValueAfterDisATotal);
+                oScheme.Discount2Amount = oFifo.Discount2Amount;
+                oScheme.SchemeCalculations = oFifo.SchemeCalculations;
+                oModel.setProperty("/schemeDetails", oScheme);
+                oModel.setProperty("/schemeSummaryText", this._formatSchemeSummary(oScheme));
+            }
             // A zero-value line has no share; place any remaining cents on
             // the last line that contributes to the allocation.
             var iLastAllocationIndex = -1;
@@ -1273,7 +1315,7 @@ sap.ui.define([
                 GSTAmount: sum("GSTAmount"),
                 GrandTotal: sum("FinalAmount"),
                 _Deliveries: aDeliveries,
-                _Schemes: aSchemes.map(function (oSelected) {
+                _Schemes: aSchemes.map(function (oSelected, iIndex) {
                     var fAdvance = Math.abs(this._parseAmount(oSelected.AdvAmount));
                     var fDis2 = this._parsePercent(oSelected.Discount2) * 100;
                     return {
@@ -1282,7 +1324,8 @@ sap.ui.define([
                         Discount1Percent: this._parsePercent(oSelected.Discount1) * 100,
                         Discount2Percent: fDis2,
                         AdvanceAmount: fAdvance,
-                        CalculatedDiscount2Amount: this._round2(fAdvance * fDis2 / 100)
+                        CalculatedDiscount2Amount: oScheme.SchemeCalculations ?
+                            oScheme.SchemeCalculations[iIndex].CalculatedDiscount2Amount : this._round2(fAdvance * fDis2 / 100)
                     };
                 }.bind(this)),
                 _Items: aPostItems

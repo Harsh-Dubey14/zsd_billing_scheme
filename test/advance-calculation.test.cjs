@@ -25,7 +25,83 @@ const items = [
     { gstRate: 5, rate: 300, qty: 5, quantityinbaseunit: 5 }
 ];
 
-test("highest Discount 1 applies to every line; a 140 pool allocates 80 and 60 before GST", () => {
+test("two deliveries follow posting-date FIFO and produce the corrected 167.50 discount", () => {
+    const { controller, state } = setup([
+        { deliveryNumber: "DEL123", rate: 500, quantityinbaseunit: 1, gstRate: 18 },
+        { deliveryNumber: "DEL456", rate: 1000, quantityinbaseunit: 2, gstRate: 18 }
+    ], [
+        { SchemeName: "FEB0+7", PostingDate: "2026-02-05", Discount1: "10%", Discount2: "7%", AdvAmount: 500 },
+        { SchemeName: "JAN10+8", PostingDate: "2026-01-05", Discount1: "10%", Discount2: "8%", AdvAmount: 1000 }
+    ]);
+    controller._rebuildBillingItems();
+    assert.equal(state.schemeDetails.SelectedSchemes[0].SchemeName, "JAN10+8");
+    assert.equal(state.schemeDetails.Discount2Amount, 167.5);
+    assert.equal(state.billingItems[0].discount2Amount, 33.5);
+    assert.equal(state.billingItems[1].discount2Amount, 134);
+    const payload = controller._buildSchemeBillingPayload();
+    assert.equal(payload._Deliveries.length, 2);
+    assert.equal(payload._Schemes[0].CalculatedDiscount2Amount, 80);
+    assert.equal(payload._Schemes[1].CalculatedDiscount2Amount, 87.5);
+    assert.equal(payload.BillingTotal, 2082.5);
+    assert.equal(payload.GSTAmount, 374.85);
+    assert.equal(payload.GrandTotal, 2457.35);
+});
+
+test("partial consumption stops FIFO and later schemes receive no discount", () => {
+    const { controller, state } = setup([{ rate: 300, quantityinbaseunit: 1 }], [
+        { PostingDate: "2026-01-05", Discount1: "0%", Discount2: "7%", AdvAmount: 500 },
+        { PostingDate: "2026-02-05", Discount1: "0%", Discount2: "8%", AdvAmount: 1000 }
+    ]);
+    controller._rebuildBillingItems();
+    assert.equal(state.schemeDetails.Discount2Amount, 21);
+    const payload = controller._buildSchemeBillingPayload();
+    assert.equal(payload._Schemes[0].CalculatedDiscount2Amount, 21);
+    assert.equal(payload._Schemes[1].CalculatedDiscount2Amount, 0);
+    assert.equal(payload.BillingTotal, 279);
+});
+
+test("zero billing value and zero advance amounts do not create discounts", () => {
+    const { controller } = setup([], [{ SchemeName: "S" }]);
+    assert.equal(controller._calculateAdvanceDiscount2([{ AdvAmount: 100, Discount2: "7%" }], 0).Discount2Amount, 0);
+    assert.equal(controller._calculateAdvanceDiscount2([{ AdvAmount: 0, Discount2: "7%" }], 300).Discount2Amount, 0);
+});
+
+test("the supplied delivery quantities and rates give 4050 after A and 293.50 Discount 2", () => {
+    const { controller, state } = setup([
+        { deliveryNumber: "DEL123", rate: 500, quantityinbaseunit: 1, gstRate: 18 },
+        { deliveryNumber: "DEL456", rate: 2000, quantityinbaseunit: 2, gstRate: 18 }
+    ], [
+        { SchemeName: "FEB0+7", PostingDate: "2026-02-05", Discount1: "10%", Discount2: "7%", AdvAmount: 500 },
+        { SchemeName: "JAN10+8", PostingDate: "2026-01-05", Discount1: "10%", Discount2: "8%", AdvAmount: 1000 }
+    ]);
+    controller._rebuildBillingItems();
+    assert.equal(state.billingItems.reduce((sum, line) => sum + line.valueAfterDisA, 0), 4050);
+    assert.equal(state.schemeDetails.Discount2Amount, 293.5);
+    assert.equal(controller._buildSchemeBillingPayload().BillingTotal, 3756.5);
+    // Recalculating after delivery changes must update both the pool and payload.
+    state.items[1].rate = 1000;
+    controller._rebuildBillingItems();
+    assert.equal(state.schemeDetails.Discount2Amount, 167.5);
+    assert.equal(controller._buildSchemeBillingPayload()._Schemes[1].CalculatedDiscount2Amount, 87.5);
+});
+
+test("three schemes consume FIFO and exact exhaustion skips later schemes", () => {
+    const { controller } = setup([], [{}]);
+    const schemes = [
+        { AdvAmount: 1000, Discount2: "8%" },
+        { AdvAmount: 500, Discount2: "7%" },
+        { AdvAmount: 100, Discount2: "6%" }
+    ];
+    const full = controller._calculateAdvanceDiscount2(schemes, 2250);
+    assert.equal(full.Discount2Amount, 160);
+    assert.equal(full.SchemeCalculations[2].CalculatedDiscount2Amount, 45);
+    const exhausted = controller._calculateAdvanceDiscount2(schemes, 1000);
+    assert.equal(exhausted.Discount2Amount, 80);
+    assert.equal(exhausted.SchemeCalculations[1].CalculatedDiscount2Amount, 0);
+    assert.equal(exhausted.SchemeCalculations[2].CalculatedDiscount2Amount, 0);
+});
+
+test("highest Discount 1 applies to every line; final FIFO scheme uses the remaining value after A", () => {
     const { controller, state } = setup(items, [
         { SchemeName: "S1", Discount1: "5%", Discount2: "6%", AdvAmount: 1000 },
         { SchemeName: "S2", Discount1: "10%", Discount2: "8%", AdvAmount: 1000 }
@@ -34,34 +110,34 @@ test("highest Discount 1 applies to every line; a 140 pool allocates 80 and 60 b
     const [first, second] = state.billingItems;
     assert.equal(first.rateAfterDisA, 180);
     assert.equal(second.rateAfterDisA, 270);
-    assert.equal(first.discount2Amount, 80);
-    assert.equal(second.discount2Amount, 60);
-    assert.equal(first.valueAfterDisB, 1720);
-    assert.equal(second.valueAfterDisB, 1290);
-    assert.equal(first.gstValue, 86);
-    assert.equal(second.gstValue, 64.5);
-    assert.equal(state.billingTotal, 3160.5);
+    assert.equal(first.discount2Amount, 132.57);
+    assert.equal(second.discount2Amount, 99.43);
+    assert.equal(first.valueAfterDisB, 1667.43);
+    assert.equal(second.valueAfterDisB, 1250.57);
+    assert.equal(first.gstValue, 83.37);
+    assert.equal(second.gstValue, 62.53);
+    assert.equal(state.billingTotal, 3063.9);
     assert.equal(state.schemeValid, true, "billing may exceed combined advances");
     const payload = controller._buildSchemeBillingPayload();
-    assert.equal(payload.GrandTotal, 3160.5);
-    assert.equal(payload._Items[0].ValueAfterDiscount2, 1720);
+    assert.equal(payload.GrandTotal, 3063.9);
+    assert.equal(payload._Items[0].ValueAfterDiscount2, 1667.43);
     assert.equal(payload._Schemes.reduce((sum, scheme) => sum + scheme.AdvanceAmount, 0), 2000);
 });
 
-test("each selected scheme uses its actual advance amount", () => {
+test("earlier FIFO schemes use advance amounts and the final scheme uses the remaining billing base", () => {
     const { controller, state } = setup(items, [
         { SchemeName: "S1", Discount1: "10%", Discount2: "6%", AdvAmount: 1000 },
         { SchemeName: "S2", Discount1: "10%", Discount2: "8%", AdvAmount: 2000 }
     ]);
     controller._rebuildBillingItems();
-    assert.equal(state.schemeDetails.Discount2Amount, 220);
-    assert.equal(state.billingItems[0].discount2Amount, 125.71);
-    assert.equal(state.billingItems[1].discount2Amount, 94.29);
-    assert.equal(state.billingItems[0].valueAfterDisB, 1674.29);
-    assert.equal(state.billingItems[1].valueAfterDisB, 1255.71);
-    assert.equal(state.billingItems[0].gstValue, 83.71);
-    assert.equal(state.billingItems[1].gstValue, 62.79);
-    assert.equal(state.billingTotal, 3076.5);
+    assert.equal(state.schemeDetails.Discount2Amount, 232);
+    assert.equal(state.billingItems[0].discount2Amount, 132.57);
+    assert.equal(state.billingItems[1].discount2Amount, 99.43);
+    assert.equal(state.billingItems[0].valueAfterDisB, 1667.43);
+    assert.equal(state.billingItems[1].valueAfterDisB, 1250.57);
+    assert.equal(state.billingItems[0].gstValue, 83.37);
+    assert.equal(state.billingItems[1].gstValue, 62.53);
+    assert.equal(state.billingTotal, 3063.9);
     assert.equal(state.schemeValid, true);
 });
 
@@ -72,11 +148,11 @@ test("negative advance amounts produce the same DIS2 as their absolute values", 
             { SchemeName: "S2", Discount1: "5%", Discount2: "8%", AdvAmount: advances[1] }
         ]);
         controller._rebuildBillingItems();
-        assert.equal(state.schemeDetails.Discount2Amount, 220);
-        assert.equal(state.billingItems[0].valueAfterDisB, 1674.29);
-        assert.equal(state.billingItems[1].valueAfterDisB, 1255.71);
-        assert.equal(state.billingTotal, 3076.5);
-        assert.equal(controller._buildSchemeBillingPayload()._Items[0].ValueAfterDiscount2, 1674.29);
+        assert.equal(state.schemeDetails.Discount2Amount, 232);
+        assert.equal(state.billingItems[0].valueAfterDisB, 1667.43);
+        assert.equal(state.billingItems[1].valueAfterDisB, 1250.57);
+        assert.equal(state.billingTotal, 3063.9);
+        assert.equal(controller._buildSchemeBillingPayload()._Items[0].ValueAfterDiscount2, 1667.43);
     }
 });
 
@@ -86,7 +162,7 @@ test("fractional allocations preserve every cent and zero quantity receives no d
         { rate: 10, quantityinbaseunit: 1 },
         { rate: 10, quantityinbaseunit: 1 },
         { rate: 10, quantityinbaseunit: 0 }
-    ], [{ SchemeName: "S", Discount1: "0%", Discount2: "1%", AdvAmount: 1 }]);
+    ], [{ SchemeName: "S", Discount1: "0%", Discount2: "0.0333333333%", AdvAmount: 100 }]);
     controller._rebuildBillingItems();
     assert.equal(controller._round2(state.billingItems.reduce((sum, item) => sum + item.discount2Amount, 0)), 0.01);
     assert.equal(state.billingItems[0].discount2Amount, 0);
@@ -106,7 +182,7 @@ test("regular scheme calculations remain percentage based", () => {
 });
 
 
-test("new BillingScheme payload matches the supplied example", () => {
+test("BillingScheme payload uses FIFO discount amounts consistently with display calculations", () => {
     const { controller, state } = setup([{
         deliveryNumber: "0080000427", deliveryDocumentItem: "10",
         product: "WF799", productDescription: "TEST PRODUCT", color: "BLACK", size: "XL",
@@ -118,10 +194,10 @@ test("new BillingScheme payload matches the supplied example", () => {
     controller._rebuildBillingItems();
     const payload = controller._buildSchemeBillingPayload();
     assert.equal(payload.SchemeType, "ADVANCE");
-    assert.equal(payload.Discount2Amount, 60);
-    assert.equal(payload.BillingTotal, 28740);
-    assert.equal(payload.GSTAmount, 1437);
-    assert.equal(payload.GrandTotal, 30177);
+    assert.equal(payload.Discount2Amount, 1728);
+    assert.equal(payload.BillingTotal, 27072);
+    assert.equal(payload.GSTAmount, 1353.6);
+    assert.equal(payload.GrandTotal, 28425.6);
     assert.equal("SchemeId" in payload._Schemes[0], false);
     assert.equal(payload._Schemes[0].AdvanceAmount, 1000);
     assert.equal(payload._Deliveries[0].SalesOrganization, "3000");
@@ -133,9 +209,9 @@ test("new BillingScheme payload matches the supplied example", () => {
     assert.equal(item.QuantityUnit, "PC");
     assert.equal(item.Discount1Amount, 66.67);
     assert.equal(item.ValueAfterDiscount1, 28800);
-    assert.equal(item.RateAfterDiscount2, 598.75);
-    assert.equal(item.FinalRate, 628.688);
-    assert.equal(item.FinalAmount, 30177);
+    assert.equal(item.RateAfterDiscount2, 564);
+    assert.equal(item.FinalRate, 592.2);
+    assert.equal(item.FinalAmount, 28425.6);
     assert.equal("InvoiceTotal" in payload, false);
     assert.equal("TaxableAmount" in item, false);
 });

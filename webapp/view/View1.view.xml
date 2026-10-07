@@ -566,7 +566,7 @@
 
 
                             <Column
-                                width="3.5rem"
+                                width="3rem"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
                                 importance="Low">
@@ -577,7 +577,7 @@
 
 
                             <Column
-                                width="8rem"
+                                width="5rem"
                                 hAlign="End"
                                 importance="High">
 

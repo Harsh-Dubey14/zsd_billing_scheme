@@ -15,11 +15,8 @@
                     <fb:FilterGroupItem name="SchemeName" label="Scheme Name" groupName="Scheme" visibleInFilterBar="true">
                         <fb:control><Input id="schemeFilterSchemeName" submit=".onSchemeValueHelpSearch" /></fb:control>
                     </fb:FilterGroupItem>
-                    <fb:FilterGroupItem name="SchemeType" label="Scheme Type" groupName="Scheme" visibleInFilterBar="true">
-                        <fb:control><Input id="schemeFilterSchemeType" submit=".onSchemeValueHelpSearch" /></fb:control>
-                    </fb:FilterGroupItem>
-                    <fb:FilterGroupItem name="CustomerName" label="Customer Name" groupName="Scheme" visibleInFilterBar="true" visible="{= ${/schemeType} !== 'regular' }">
-                        <fb:control><Input id="schemeFilterCustomerName" submit=".onSchemeValueHelpSearch" /></fb:control>
+                    <fb:FilterGroupItem name="PostingDate" label="Posting Date" groupName="Scheme" visibleInFilterBar="true" visible="{= ${/schemeType} === 'advance' }">
+                        <fb:control><DatePicker id="schemeFilterPostingDate" valueFormat="yyyy-MM-dd" displayFormat="yyyy-MM-dd" change=".onSchemePostingDateChange" /></fb:control>
                     </fb:FilterGroupItem>
                 </fb:filterGroupItems>
             </fb:FilterBar>
