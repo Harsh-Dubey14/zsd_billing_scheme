@@ -2178,7 +2178,10 @@ sap.ui.define(
 
           var aSchemes = oScheme.SelectedSchemes || [oScheme];
 
-          var fDiscount1 = this._parsePercent(oScheme.Discount1) * 100;
+          // Remove floating-point tails before Gateway validates decimal scale.
+          var fDiscount1 = this._round2(
+            this._parsePercent(oScheme.Discount1) * 100
+          );
 
           var mSeen = {};
 
@@ -2311,15 +2314,18 @@ sap.ui.define(
               function (oSelected, iIndex) {
                 var fAdvance = Math.abs(this._parseAmount(oSelected.AdvAmount));
 
-                var fDis2 = this._parsePercent(oSelected.Discount2) * 100;
+                var fDis2 = this._round2(
+                  this._parsePercent(oSelected.Discount2) * 100
+                );
 
                 return {
                   accountingdocument: oSelected.AccountingDocument || "",
 
                   SchemeName: oSelected.SchemeName || "",
 
-                  Discount1Percent:
-                    this._parsePercent(oSelected.Discount1) * 100,
+                  Discount1Percent: this._round2(
+                    this._parsePercent(oSelected.Discount1) * 100
+                  ),
 
                   Discount2Percent: fDis2,
 

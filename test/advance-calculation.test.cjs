@@ -25,6 +25,23 @@ const items = [
     { gstRate: 5, rate: 300, qty: 5, quantityinbaseunit: 5 }
 ];
 
+test("POST discount percentages serialize without floating-point tails", () => {
+    const { controller } = setup([
+        { deliveryNumber: "DEL123", rate: 100, quantityinbaseunit: 1, gstRate: 5 }
+    ], [
+        { SchemeName: "SEVEN", PostingDate: "2026-01-01", Discount1: "7%", Discount2: "7%", AdvAmount: 500 },
+        { SchemeName: "FRACTION", PostingDate: "2026-02-01", Discount1: "6.25%", Discount2: "7.35%", AdvAmount: 500 }
+    ]);
+    controller._rebuildBillingItems();
+    const payload = JSON.parse(JSON.stringify(controller._buildSchemeBillingPayload()));
+    assert.equal(payload.Discount1Percent, 7);
+    assert.equal(payload._Items[0].Discount1Percent, 7);
+    assert.equal(payload._Schemes[0].Discount1Percent, 7);
+    assert.equal(payload._Schemes[0].Discount2Percent, 7);
+    assert.equal(payload._Schemes[1].Discount1Percent, 6.25);
+    assert.equal(payload._Schemes[1].Discount2Percent, 7.35);
+});
+
 test("two deliveries follow posting-date FIFO and produce the corrected 167.50 discount", () => {
     const { controller, state } = setup([
         { deliveryNumber: "DEL123", rate: 500, quantityinbaseunit: 1, gstRate: 18 },
