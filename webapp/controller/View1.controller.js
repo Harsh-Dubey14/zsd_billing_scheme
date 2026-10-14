@@ -1,33 +1,19 @@
 sap.ui.define(
   [
     "sap/ui/core/mvc/Controller",
-
     "sap/ui/core/Fragment",
-
     "sap/ui/core/BusyIndicator",
-
     "sap/ui/model/json/JSONModel",
-
     "sap/ui/model/Filter",
-
     "sap/ui/model/FilterOperator",
-
     "sap/m/Token",
-
     "sap/m/MessageToast",
-
     "sap/m/MessageBox",
-
     "sap/m/GroupHeaderListItem",
-
     "sap/ui/table/Column",
-
     "sap/m/Label",
-
     "sap/m/Text",
-
     "sap/m/Column",
-
     "sap/m/ColumnListItem"
   ],
   (
@@ -162,9 +148,7 @@ sap.ui.define(
 
           if (oInput) {
             oInput.removeAllTokens();
-
             oInput.setValue("");
-
             this._syncDeliveryState();
           }
         },
@@ -174,11 +158,8 @@ sap.ui.define(
             "Clear all delivery numbers, selected schemes, and billing details? This will discard the current entries.",
             {
               title: "Clear billing details?",
-
               actions: ["Clear", MessageBox.Action.CANCEL],
-
               emphasizedAction: MessageBox.Action.CANCEL,
-
               initialFocus: MessageBox.Action.CANCEL,
 
               onClose: function (sAction) {
@@ -199,36 +180,24 @@ sap.ui.define(
 
           if (oInput) {
             oInput.removeAllTokens();
-
             oInput.setValue("");
           }
 
           var oModel = this.getView().getModel();
 
           oModel.setProperty("/postingComplete", false);
-
           oModel.setProperty("/items", []);
-
           oModel.setProperty("/transactionCurrency", "");
-
           oModel.setProperty("/itemCount", 0);
-
           oModel.setProperty("/deliveryCount", 0);
-
           oModel.setProperty("/schemeDetails", null);
-
           oModel.setProperty("/schemeType", "");
 
           this._mDeliveryGroupInfo = {};
-
           oModel.setProperty("/schemeSelectedText", "");
-
           oModel.setProperty("/schemeSummaryText", "");
-
           oModel.setProperty("/hasSchemeDetails", false);
-
           oModel.setProperty("/billingItems", []);
-
           oModel.setProperty("/billingTotal", 0);
           oModel.setProperty("/billingTotalBeforeRoundOff", 0);
           oModel.setProperty("/taxableTotal", 0);
@@ -236,13 +205,10 @@ sap.ui.define(
           oModel.setProperty("/roundOff", 0);
           oModel.setProperty("/advanceUsed", 0);
           oModel.setProperty("/advanceRemaining", 0);
-
           oModel.setProperty("/schemeValid", true);
-
           oModel.setProperty("/schemeErrorText", "");
 
           this._syncDeliveryState();
-
           MessageToast.show("Cleared.");
         },
 
@@ -280,13 +246,11 @@ sap.ui.define(
             }
 
             mExisting[sValue] = true;
-
             iAdded++;
 
             oInput.addToken(
               new Token({
                 key: sValue,
-
                 text: sValue
               })
             );
@@ -297,7 +261,6 @@ sap.ui.define(
 
         _syncDeliveryState() {
           var oInput = this.byId("deliveryInput");
-
           var oModel = this.getView().getModel();
 
           if (!oInput || !oModel) {
@@ -320,12 +283,10 @@ sap.ui.define(
           oTable.setModel(oDialog.getModel(sModel), sModel);
 
           // ValueHelpDialog also reads row contexts through the default model.
-
           oTable.setModel(oDialog.getModel(sModel));
 
           if (!oTable.data("selectionRestoreAttached")) {
             oTable.data("selectionRestoreAttached", true);
-
             oDialog.attachUpdateSelection(function (oEvent) {
               this._restoreValueHelpSelection(
                 oDialog,
@@ -362,7 +323,6 @@ sap.ui.define(
               oTable.addColumn(
                 new TableColumn({
                   label: new Label({ text: aField[1] }),
-
                   template: fnCell(aField),
                   width: aField[2],
                   sortProperty: aField[0]
@@ -384,7 +344,6 @@ sap.ui.define(
             oTable.bindItems({
               path: sPath,
               templateShareable: false,
-
               template: new ColumnListItem({ cells: aFields.map(fnCell) })
             });
           }
@@ -400,8 +359,7 @@ sap.ui.define(
           var sKeyField = oDialog.getKey();
 
           var fnKey = function (vKey) {
-            var sKey = String(vKey == null ? "" : vKey);
-
+          var sKey = String(vKey === null ? "" : vKey);
             return sKeyField === "DeliveryDocument"
               ? sKey.replace(/^0+(?=\d)/, "")
               : sKey;
@@ -411,7 +369,6 @@ sap.ui.define(
 
           if (oTable.bindRows) {
             var oBinding = oTable.getBinding("rows");
-
             oTable.clearSelection();
 
             if (!oBinding) {
@@ -426,7 +383,6 @@ sap.ui.define(
                 oKeys.has(fnKey(oContext.getProperty(sKeyField)))
               ) {
                 var iRow = oContext.getIndex ? oContext.getIndex() : iIndex;
-
                 oTable.addSelectionInterval(iRow, iRow);
               }
             });
@@ -659,41 +615,39 @@ sap.ui.define(
 
         // ---------------------------------------------------------------
 
-        onOpenUploadDialog() {
-          var oView = this.getView();
+        // onOpenUploadDialog() {
+        //   var oView = this.getView();
 
-          if (!this._pUploadDialog) {
-            this._pUploadDialog = Fragment.load({
-              id: oView.getId(),
+        //   if (!this._pUploadDialog) {
+        //     this._pUploadDialog = Fragment.load({
+        //       id: oView.getId(),
 
-              name: "com.zeel.billingscheme.billingscheme.fragment.UploadDeliveryDialog",
+        //       name: "com.zeel.billingscheme.billingscheme.fragment.UploadDeliveryDialog",
 
-              controller: this
-            }).then(function (oDialog) {
-              oView.addDependent(oDialog);
+        //       controller: this
+        //     }).then(function (oDialog) {
+        //       oView.addDependent(oDialog);
 
-              return oDialog;
-            });
-          }
+        //       return oDialog;
+        //     });
+        //   }
 
-          this._pUploadDialog.then(function (oDialog) {
-            oDialog.open();
-          });
-        },
+        //   this._pUploadDialog.then(function (oDialog) {
+        //     oDialog.open();
+        //   });
+        // },
 
-        onCloseUploadDialog() {
-          if (this._pUploadDialog) {
-            this._pUploadDialog.then(function (oDialog) {
-              oDialog.close();
-            });
-          }
-        },
+        // onCloseUploadDialog() {
+        //   if (this._pUploadDialog) {
+        //     this._pUploadDialog.then(function (oDialog) {
+        //       oDialog.close();
+        //     });
+        //   }
+        // },
 
         onDeliveryFileChange(oEvent) {
           var oUploader = oEvent.getSource();
-
           var aFiles = oEvent.getParameter("files") || [];
-
           var oFile = aFiles[0];
 
           if (!oFile) {
@@ -817,7 +771,6 @@ sap.ui.define(
 
         onFetchItems() {
           var oInput = this.byId("deliveryInput");
-
           var oModel = this.getView().getModel();
 
           if (!oInput) {
@@ -847,15 +800,10 @@ sap.ui.define(
 
                 if (sValidationError) {
                   oModel.setProperty("/items", []);
-
                   oModel.setProperty("/itemCount", 0);
-
                   oModel.setProperty("/deliveryCount", 0);
-
                   this._mDeliveryGroupInfo = {};
-
                   this._rebuildBillingItems();
-
                   MessageBox.error(sValidationError, {
                     title: "Delivery cannot be billed"
                   });
@@ -864,11 +812,8 @@ sap.ui.define(
                 }
 
                 oModel.setProperty("/items", aAllItems);
-
                 oModel.setProperty("/itemCount", aAllItems.length);
-
                 oModel.setProperty("/deliveryCount", aDeliveryNumbers.length);
-
                 this._rebuildBillingItems();
 
                 MessageToast.show(
@@ -931,7 +876,7 @@ sap.ui.define(
         },
 
         _readDeliveryItems(aDeliveryNumbers) {
-          // ZCGET_DELV's declared OData key is just DeliveryDocument, but
+          // get_delivery's declared OData key is just DeliveryDocument, but
 
           // the backend returns one row per line item - a delivery with
 
@@ -958,7 +903,7 @@ sap.ui.define(
             .join(" or ");
 
           var sUrl =
-            sServiceUri + "ZCGET_DELV?$filter=" + encodeURIComponent(sFilter);
+            sServiceUri + "get_delivery?$filter=" + encodeURIComponent(sFilter);
 
           return fetch(sUrl, {
             headers: { Accept: "application/json" }
@@ -1021,7 +966,7 @@ sap.ui.define(
 
            
 
-          var aItems = (aRawRows || []).map(function (oRow) {
+          var aItems = (aRawRows || []).map((oRow) => {
             var sDeliveryNumber = String(oRow.DeliveryDocument || "").padStart(
               10,
               "0"
@@ -1054,15 +999,15 @@ sap.ui.define(
 
               hsnCode: oRow.HsnCode || "",
 
-              bag: Number(oRow.NumberOfBags) || 0,
+              bag: this._round2(Number(oRow.NumberOfBags) || 0),
 
-              pack: Number(oRow.NumberOfPacks) || 0,
+              pack: this._round2(Number(oRow.NumberOfPacks) || 0),
 
-              qty: Number(oRow.Quantity) || 0,
+              qty: this._round2(Number(oRow.Quantity) || 0),
 
               unit: oRow.BaseUnit || "",
 
-              rate: Number(oRow.Rate) || 0,
+              rate: this._round2(Number(oRow.Rate) || 0),
 
               transactionCurrency: oRow.TransactionCurrency || "",
 
@@ -1074,7 +1019,7 @@ sap.ui.define(
 
               customerAddress: oRow.Address || "",
 
-              quantityinbaseunit: oRow.quantityinbaseunit || 0,
+              quantityinbaseunit: this._round2(Number(oRow.quantityinbaseunit) || 0),
 
               actualUom: oRow.actualuom || ""
             };
@@ -1799,8 +1744,7 @@ sap.ui.define(
               var fQty = Number(oItem.quantityinbaseunit) || 0;
 
               if (bAdvance) {
-                // Sheet convention: round(rate * quantity) for each row;
-                // do not round the rate to 2 decimals before multiplication.
+                // Round each line value before applying Discount 1.
                 var fLineNet = this._round2(fRate * fQty);
                 return this._round2(fLineNet * (1 - fDisc1));
               }
@@ -1875,8 +1819,8 @@ sap.ui.define(
                   fAllocatedDiscount + fDiscount2Amount
                 );
                 fAfterB = this._round2(fAfterA - fDiscount2Amount);
-                fRateAfterDisA = fQty ? this._round3(fAfterA / fQty) : 0;
-                fRateAfterDisB = fQty ? this._round3(fAfterB / fQty) : 0;
+                fRateAfterDisA = fQty ? this._round2(fAfterA / fQty) : 0;
+                fRateAfterDisB = fQty ? this._round2(fAfterB / fQty) : 0;
               }
 
               var fItemGstRate = Number(oItem.gstRate) || 0;
@@ -1965,10 +1909,6 @@ sap.ui.define(
           return Math.round((fValue + Number.EPSILON) * 100) / 100;
         },
 
-        _round3(fValue) {
-          return Math.round((fValue + Number.EPSILON) * 1000) / 1000;
-        },
-
         _parseAmount(sValue) {
           var fValue = parseFloat(String(sValue || "0").replace(/,/g, ""));
 
@@ -1976,7 +1916,7 @@ sap.ui.define(
         },
 
         _formatAmount(fValue) {
-          return this._parseAmount(fValue).toLocaleString("en-IN", {
+          return this._round2(this._parseAmount(fValue)).toLocaleString("en-IN", {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
           });
@@ -2004,20 +1944,11 @@ sap.ui.define(
 
         _formatDate(oDate) {
           var sYear = oDate.getFullYear();
-
           var sMonth = String(oDate.getMonth() + 1).padStart(2, "0");
-
           var sDay = String(oDate.getDate()).padStart(2, "0");
 
           return sYear + "-" + sMonth + "-" + sDay;
         },
-
-        // ---------------------------------------------------------------
-
-        // Post scheme billing
-
-        // ---------------------------------------------------------------
-
         onPostScheme() {
           var oModel = this.getView().getModel();
 
@@ -2047,7 +1978,6 @@ sap.ui.define(
           }
 
           var oPayload = this._buildSchemeBillingPayload();
-
           var sValidationError = this._getDeliveryValidationError(
             oModel.getProperty("/items")
           );
@@ -2061,9 +1991,7 @@ sap.ui.define(
           }
 
           oModel.setProperty("/posting", true);
-
           BusyIndicator.show(0);
-
           this._postSchemeBilling(oPayload)
 
             .then(
@@ -2076,7 +2004,6 @@ sap.ui.define(
 
             .catch(function (oError) {
               BusyIndicator.hide();
-
               MessageBox.error(
                 "Could not post scheme billing: " +
                   (oError && oError.message ? oError.message : oError)
@@ -2088,17 +2015,7 @@ sap.ui.define(
             });
         },
 
-        // The action responds 200 OK even for business failures (e.g. a
-
-        // delivery already fully invoiced) - the outcome is only in the
-
-        // response body's own Status/Message, not the HTTP status code, so
-
-        // that's what drives the success/error box.
-
         _showSchemeBillingResult(oResult) {
-           
-
           oResult = oResult || {};
 
           var sStatus = String(
@@ -2169,112 +2086,72 @@ sap.ui.define(
 
         _buildSchemeBillingPayload() {
           var oModel = this.getView().getModel();
-
           var aItems = oModel.getProperty("/items") || [];
-
           var aBillingItems = oModel.getProperty("/billingItems") || [];
-
           var oScheme = oModel.getProperty("/schemeDetails") || {};
-
           var aSchemes = oScheme.SelectedSchemes || [oScheme];
-
-          // Remove floating-point tails before Gateway validates decimal scale.
           var fDiscount1 = this._round2(
             this._parsePercent(oScheme.Discount1) * 100
           );
 
           var mSeen = {};
-
           var aDeliveries = [];
-
           var aPostItems = aItems.map(
             function (oItem, iIndex) {
               var oBill = aBillingItems[iIndex] || {};
-
               var fQty = Number(oItem.quantityinbaseunit) || 0;
 
               if (!mSeen[oItem.deliveryNumber]) {
                 mSeen[oItem.deliveryNumber] = true;
-
                 aDeliveries.push({
                   DeliveryDocument: oItem.deliveryNumber,
-
                   BillingDocumentType: "",
-
                   BillingDocumentDate: oItem.billingDocumentDate || "",
-
                   SalesOrganization: oItem.salesOrganization || "",
-
                   DestinationCountry: oItem.destinationCountry || "",
-
                   SDDocumentCategory: "J",
-
                   Customer: oItem.customerId || ""
                 });
               }
 
               return {
                 DeliveryDocument: oItem.deliveryNumber,
-
                 DeliveryDocumentItem: "",
-
                 Product: oItem.product || "",
-
                 ProductDescription: "",
-
                 Customer: oItem.customerId || "",
-
                 Color: oItem.color || "",
-
                 ProductSize: oItem.size || "",
-
                 Brand: oItem.brand || "",
-
                 HSNCode: oItem.hsnCode || "",
-
-                Bag:
+                Bag: this._round2(
                   String(oItem.unit).toUpperCase() === "BAG"
-                    ? oItem.qty
-                    : oItem.bag,
-
-                Pack: oItem.pack || 0,
-
-                Quantity: fQty,
-
+                    ? Number(oItem.qty) || 0
+                    : Number(oItem.bag) || 0),
+                Pack: this._round2(Number(oItem.pack) || 0),
+                Quantity: this._round2(fQty),
                 QuantityUnit: oItem.actualUom || "",
-
-                OriginalRate: oItem.rate,
-
+                OriginalRate: this._round2(Number(oItem.rate) || 0),
                 Discount1Percent: fDiscount1,
-
                 Discount1Amount: this._round2((oItem.rate * fDiscount1) / 100),
-
-                RateAfterDiscount1: oBill.rateAfterDisA,
-
-                ValueAfterDiscount1: oBill.valueAfterDisA,
-
+                RateAfterDiscount1: this._round2(oBill.rateAfterDisA),
+                ValueAfterDiscount1: this._round2(oBill.valueAfterDisA),
                 Discount2Amount: this._round2(
                   oBill.valueAfterDisA - oBill.valueAfterDisB
                 ),
 
                 RateAfterDiscount2: fQty
-                  ? Math.round(
-                      (oBill.valueAfterDisB / fQty + Number.EPSILON) * 1000
-                    ) / 1000
+                  ? this._round2(oBill.valueAfterDisB / fQty)
                   : 0,
 
-                ValueAfterDiscount2: oBill.valueAfterDisB,
-
+                ValueAfterDiscount2: this._round2(oBill.valueAfterDisB),
                 GSTPercent: oBill.gstRate,
-
-                GSTAmount: oBill.gstValue,
-
+                GSTAmount: this._round2(oBill.gstValue),
                 FinalRate: fQty
-                  ? Math.round((oBill.total / fQty + Number.EPSILON) * 1000) /
-                    1000
+                  ? this._round2(oBill.total / fQty)
                   : 0,
 
-                FinalAmount: oBill.total
+                FinalAmount: this._round2(oBill.total)
               };
             }.bind(this)
           );
@@ -2297,15 +2174,11 @@ sap.ui.define(
               : "",
 
             Discount1Percent: fDiscount1,
-
             Discount2Amount: sum("Discount2Amount"),
-
             BillingTotal: sum("ValueAfterDiscount2"),
-
             GSTAmount: sum("GSTAmount"),
-
             GrandTotal: oScheme.SelectedSchemes
-              ? oModel.getProperty("/billingTotal")
+              ? this._round2(oModel.getProperty("/billingTotal"))
               : sum("FinalAmount"),
 
             _Deliveries: aDeliveries,
@@ -2313,65 +2186,42 @@ sap.ui.define(
             _Schemes: aSchemes.map(
               function (oSelected, iIndex) {
                 var fAdvance = Math.abs(this._parseAmount(oSelected.AdvAmount));
-
                 var fDis2 = this._round2(
                   this._parsePercent(oSelected.Discount2) * 100
                 );
 
                 return {
                   accountingdocument: oSelected.AccountingDocument || "",
-
                   SchemeName: oSelected.SchemeName || "",
-
                   Discount1Percent: this._round2(
                     this._parsePercent(oSelected.Discount1) * 100
                   ),
-
                   Discount2Percent: fDis2,
-
-                  AdvanceAmount: fAdvance,
-
-                  CalculatedDiscount2Amount: oScheme.SchemeCalculations
+                  AdvanceAmount: this._round2(fAdvance),
+                  CalculatedDiscount2Amount: this._round2(oScheme.SchemeCalculations
                     ? oScheme.SchemeCalculations[iIndex]
                         .CalculatedDiscount2Amount
-                    : this._round2((fAdvance * fDis2) / 100)
+                    : (fAdvance * fDis2) / 100)
                 };
               }.bind(this)
             ),
-
             _Items: aPostItems
           };
         },
 
         _postSchemeBilling(oPayload) {
-          // This action expects the payload as the raw request body, not
-
-          // wrapped under a named OData action parameter - so the OData v4
-
-          // model's operation-binding API (bindContext/setParameter, which
-
-          // always wraps parameters per protocol) can't send it correctly.
-
-          // A plain POST is used instead; SAP Gateway still enforces CSRF
-
-          // on it, so a token is fetched first.
-
           var sServiceUri = this.getOwnerComponent().getManifestEntry(
             "/sap.app/dataSources/deliveryService/uri"
           );
-
           var sActionUrl = sServiceUri + "BillingScheme";
 
           return this._fetchCsrfToken(sServiceUri)
             .then(function (sToken) {
               return fetch(sActionUrl, {
                 method: "POST",
-
                 headers: {
                   "Content-Type": "application/json",
-
                   Accept: "application/json",
-
                   "X-CSRF-Token": sToken
                 },
 
@@ -2395,13 +2245,6 @@ sap.ui.define(
               }.bind(this)
             );
         },
-
-        // Prefer the backend's own error text (either this action's
-
-        // {Message: ...} shape or the standard OData {error: {message}}
-
-        // shape) over the raw HTTP status/body.
-
         _extractErrorMessage(sText) {
           if (!sText) {
             return "";
@@ -2428,7 +2271,6 @@ sap.ui.define(
         _fetchCsrfToken(sServiceUri) {
           return fetch(sServiceUri + "$metadata", {
             method: "GET",
-
             headers: { "X-CSRF-Token": "Fetch" }
           }).then(function (oResponse) {
             return oResponse.headers.get("X-CSRF-Token") || "";

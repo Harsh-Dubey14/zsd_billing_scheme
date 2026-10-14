@@ -254,7 +254,7 @@
                         </HBox>
 
                         <ObjectNumber
-                            number="{path: '/billingTotal', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                            number="{path: '/billingTotal', formatter: '._formatAmount'}"
                             unit="{/transactionCurrency}"
                             emphasized="true"
                             state="{= ${/schemeValid} ? 'None' : 'Error' }" />
@@ -502,7 +502,7 @@
                                     <Text text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}" />
 
                                     <ObjectNumber
-                                        number="{path: 'rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'rate', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}" />
 
                                 </cells>
@@ -704,36 +704,36 @@
                                     <Text text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}" />
 
                                     <ObjectNumber
-                                        number="{path: 'rate', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'rate', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}" />
 
                                     <Text
                                         text="{path: 'discount1', formatter: '._formatPercent'}" />
 
                                     <ObjectNumber
-                                        number="{path: 'rateAfterDisA', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'rateAfterDisA', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}" />
 
                                     <ObjectNumber
-                                        number="{path: 'valueAfterDisA', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'valueAfterDisA', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}" />
 
                                     <Text
                                         text="{parts: [{path: 'discount2'}, {path: '/schemeType'}], formatter: '._formatDiscount2'}" />
 
                                     <ObjectNumber
-                                        number="{path: 'valueAfterDisB', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'valueAfterDisB', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}" />
 
                                     <Text
                                         text="{path: 'gstPercent', formatter: '._formatPercent'}" />
 
                                     <ObjectNumber
-                                        number="{path: 'gstValue', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'gstValue', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}" />
 
                                     <ObjectNumber
-                                        number="{path: 'total', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                                        number="{path: 'total', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}"
                                         emphasized="true" />
 
@@ -771,7 +771,7 @@
                         class="zbsFooterLabel" />
 
                     <ObjectNumber
-                        number="{path: '/billingTotal', type: 'sap.ui.model.type.Float', formatOptions: {minFractionDigits: 2, maxFractionDigits: 2, groupingEnabled: true}}"
+                        number="{path: '/billingTotal', formatter: '._formatAmount'}"
                         unit="{/transactionCurrency}"
                         emphasized="true"
                         state="{= ${/schemeValid} ? 'None' : 'Error' }" />

@@ -25,6 +25,33 @@ const items = [
     { gstRate: 5, rate: 300, qty: 5, quantityinbaseunit: 5 }
 ];
 
+test("fractional rates, quantities and amounts use two decimals on screen and in POST", () => {
+    const { controller, state } = setup([], [{}]);
+    state.items = controller._buildItemsFromDeliveryRows([{
+        DeliveryDocument: "123", Rate: "12.3456", Quantity: "3.4567",
+        NumberOfBags: "1.2345", NumberOfPacks: "2.3456",
+        quantityinbaseunit: "3.4567", BaseUnit: "PC", actualuom: "PC", GstRate: 5
+    }]);
+    state.schemeDetails = { SchemeType: "REGULAR", Discount1: "0%", Discount2: "0%", AdvAmount: 123.4567 };
+    assert.equal(state.items[0].rate, 12.35);
+    assert.equal(state.items[0].quantityinbaseunit, 3.46);
+    assert.equal(controller._formatAmount(12.3456), "12.35");
+    assert.equal(controller._formatAmount(7), "7.00");
+    assert.equal(controller._formatQuantity(3.4567, "PC"), "3.46 PC");
+    controller._rebuildBillingItems();
+    const payload = JSON.parse(JSON.stringify(controller._buildSchemeBillingPayload()));
+    const item = payload._Items[0];
+    assert.equal(item.OriginalRate, 12.35);
+    assert.equal(item.Quantity, 3.46);
+    assert.equal(item.Bag, 1.23);
+    assert.equal(item.Pack, 2.35);
+    assert.equal(item.FinalRate, 12.97);
+    assert.equal(payload._Schemes[0].AdvanceAmount, 123.46);
+    Object.values(item).filter(value => typeof value === "number").forEach(value => {
+        assert.equal(value, Number(value.toFixed(2)));
+    });
+});
+
 test("POST discount percentages serialize without floating-point tails", () => {
     const { controller } = setup([
         { deliveryNumber: "DEL123", rate: 100, quantityinbaseunit: 1, gstRate: 5 }
