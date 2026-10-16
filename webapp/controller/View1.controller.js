@@ -1,45 +1,22 @@
 sap.ui.define([
-
     "sap/ui/core/mvc/Controller",
-
     "sap/ui/core/Fragment",
-
     "sap/ui/core/BusyIndicator",
-
     "sap/ui/model/json/JSONModel",
-
     "sap/ui/model/Filter",
-
     "sap/ui/model/FilterOperator",
-
     "sap/m/Token",
-
     "sap/m/MessageToast",
-
     "sap/m/MessageBox",
-
     "sap/m/GroupHeaderListItem",
-
     "sap/ui/table/Column",
-
     "sap/m/Label",
-
     "sap/m/Text",
-
     "sap/m/Column",
-
     "sap/m/ColumnListItem"
-
 ], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem, TableColumn, Label, Text, MobileColumn, ColumnListItem) => {
-
     "use strict";
-
-
-
     return Controller.extend("com.zeel.billingscheme.billingscheme.controller.View1", {
-
-
-
         onInit() {
 
             this.getView().setModel(new JSONModel({
@@ -100,108 +77,47 @@ sap.ui.define([
 
         },
 
-
-
-        // MultiInput's own paste-to-token splitting is unreliable for
-
-        // multi-cell Excel pastes (rows separated by \r\n, columns by \t) -
-
-        // it can merge/garble values instead of creating one token per cell.
-
-        // Handling the native "paste" event ourselves guarantees every
-
-        // pasted delivery number becomes its own token.
-
         _attachDeliveryPasteHandler() {
 
             var oInput = this.byId("deliveryInput");
-
-
-
             if (!oInput) {
-
                 return;
-
             }
-
-
-
             this._fnDeliveryPasteHandler = this._onDeliveryInputPaste.bind(this);
-
-
-
             oInput.addEventDelegate({
 
                 onAfterRendering: function () {
 
                     var oDomRef = oInput.getFocusDomRef();
-
-
-
                     if (oDomRef) {
 
-                        // Capture phase + stopPropagation: MultiInput binds
-
-                        // its own (buggy, last-value-only) paste handler
-
-                        // directly on this same input in the bubble phase.
-
-                        // preventDefault() alone only blocks the browser's
-
-                        // native paste, not that sibling listener - capturing
-
-                        // first and stopping propagation is what suppresses it.
-
                         oDomRef.removeEventListener("paste", this._fnDeliveryPasteHandler, true);
-
                         oDomRef.addEventListener("paste", this._fnDeliveryPasteHandler, true);
 
                     }
 
                 }.bind(this)
-
             }, this);
-
         },
 
-
-
         _onDeliveryInputPaste(oNativeEvent) {
-
             var oClipboardData = oNativeEvent.clipboardData || window.clipboardData;
-
             var sText = oClipboardData ? oClipboardData.getData("text") : "";
-
             var aValues = this._splitDeliveryNumbers(sText);
-
-
-
             if (!aValues.length) {
 
                 return;
 
             }
 
-
-
             oNativeEvent.preventDefault();
-
             oNativeEvent.stopPropagation();
-
             oNativeEvent.stopImmediatePropagation();
 
-
-
             var iAdded = this._addDeliveryNumbers(aValues);
-
-
-
             this._syncDeliveryState();
 
-
-
             if (iAdded) {
-
                 MessageToast.show(iAdded + " delivery number(s) added from paste.");
 
             }
@@ -219,69 +135,34 @@ sap.ui.define([
 
 
         onDeliverySubmit(oEvent) {
-
             var sValue = oEvent.getParameter("value") || "";
-
             var oInput = oEvent.getSource();
-
-
-
             var iAdded = this._addDeliveryNumbers(this._splitDeliveryNumbers(sValue));
-
-
 
             oInput.setValue("");
 
-
-
             if (iAdded === 0 && sValue.trim()) {
-
                 MessageToast.show("Delivery number already added or invalid.");
-
             }
-
-
 
             this._syncDeliveryState();
-
         },
-
-
 
         onDeliveryTokenUpdate() {
-
-            // Fires for both pasted (auto-tokenized) and removed tokens;
-
-            // just resync the derived counters/flags afterwards.
-
             setTimeout(this._syncDeliveryState.bind(this), 0);
-
         },
-
-
 
         onClearDeliveryInput() {
-
             var oInput = this.byId("deliveryInput");
-
             if (oInput) {
-
                 oInput.removeAllTokens();
-
                 oInput.setValue("");
-
                 this._syncDeliveryState();
-
             }
-
         },
 
-
-
         onClearAll() {
-
             MessageBox.warning("Clear all delivery numbers, selected schemes, and billing details? This will discard the current entries.", {
-
                 title: "Clear billing details?",
 
                 actions: ["Clear", MessageBox.Action.CANCEL],
@@ -580,7 +461,7 @@ sap.ui.define([
 
             var fnKey = function (vKey) {
 
-                var sKey = String(vKey == null ? "" : vKey);
+                var sKey = String(vKey === null ? "" : vKey);
 
                 return sKeyField === "DeliveryDocument" ? sKey.replace(/^0+(?=\d)/, "") : sKey;
 
@@ -1297,10 +1178,6 @@ sap.ui.define([
 
             this._mDeliveryGroupInfo = mGroupInfo;
 
-
-
-            // eslint-disable-next-line complexity
-
             var aItems = (aRawRows || []).map(function (oRow) {
 
                 var sDeliveryNumber = String(oRow.DeliveryDocument || "").padStart(10, "0");
@@ -1372,9 +1249,6 @@ sap.ui.define([
                     return a.deliveryNumber < b.deliveryNumber ? -1 : 1;
 
                 }
-
-                // eslint-disable-next-line no-nested-ternary
-
                 return a.deliveryDocumentItem < b.deliveryDocumentItem ? -1 :
 
                     a.deliveryDocumentItem > b.deliveryDocumentItem ? 1 : 0;
@@ -2054,7 +1928,7 @@ sap.ui.define([
 
         _formatSchemeSummary(oSchemeDetails) {
 
-            // eslint-disable-next-line no-param-reassign
+             
 
             oSchemeDetails = oSchemeDetails || {};
 
@@ -2064,7 +1938,7 @@ sap.ui.define([
 
                 return "Scheme: " + oSchemeDetails.SchemeName +
 
-                    "  |  Type: " + oSchemeDetails.SchemeType +
+                    // "  |  Type: " + oSchemeDetails.SchemeType +
 
                     "  |  Discount 1: " + this._formatPercent(oSchemeDetails.Discount1) +
 
@@ -2075,7 +1949,7 @@ sap.ui.define([
 
 
             var sResult = "Scheme: " + oSchemeDetails.SchemeName +
-                "  |  Type: " + oSchemeDetails.SchemeType +
+              //  "  |  Type: " + oSchemeDetails.SchemeType +
                 "  |  Discount 1: " + this._formatPercent(oSchemeDetails.Discount1) +
                 "  |  Discount 2: " + (oSchemeDetails.SelectedSchemes ?
                     this._formatAmount(oSchemeDetails.Discount2Amount) + " " + (this.getView().getModel().getProperty("/transactionCurrency") || "") : this._formatPercent(oSchemeDetails.Discount2)) +
@@ -2087,12 +1961,12 @@ sap.ui.define([
                     "  |  Carry Forward: " + this._formatAmount(oSchemeDetails.TotalAdvanceRemaining);
             }
 
-            if (oSchemeDetails.SelectedSchemes && oSchemeDetails.SchemeCalculations &&
-                    oSchemeDetails.SchemeCalculations.length) {
-                sResult += "  |  Advance Balance (Excel): " +
-                    this._formatAmount(oSchemeDetails.ExcelCustomerAdvanceBalance) +
-                    "  |  Customer Pending: " + this._formatAmount(oSchemeDetails.CustomerPendingAmount);
-            }
+            // if (oSchemeDetails.SelectedSchemes && oSchemeDetails.SchemeCalculations &&
+            //         oSchemeDetails.SchemeCalculations.length) {
+            //     sResult += "  |  Advance Balance (Excel): " +
+            //         this._formatAmount(oSchemeDetails.ExcelCustomerAdvanceBalance) +
+            //         "  |  Customer Pending: " + this._formatAmount(oSchemeDetails.CustomerPendingAmount);
+            // }
             return sResult;
 
         },
@@ -2402,409 +2276,203 @@ sap.ui.define([
             }
 
             var oPayload = this._buildSchemeBillingPayload();
-
             var sValidationError = this._getDeliveryValidationError(oModel.getProperty("/items"));
 
             if (sValidationError) {
-
                 MessageBox.error(sValidationError, { title: "Delivery cannot be billed" });
-
                 return;
-
             }
 
-
-
             oModel.setProperty("/posting", true);
-
             BusyIndicator.show(0);
 
-
-
             this._postSchemeBilling(oPayload)
-
                 .then(function (oResult) {
-
                     BusyIndicator.hide();
-
                     this._showSchemeBillingResult(oResult);
-
                 }.bind(this))
 
                 .catch(function (oError) {
-
                     BusyIndicator.hide();
-
                     MessageBox.error("Could not post scheme billing: " + (oError && oError.message ? oError.message : oError));
-
                 })
 
                 .finally(function () {
-
                     oModel.setProperty("/posting", false);
-
                 });
-
         },
 
-
-
-        // The action responds 200 OK even for business failures (e.g. a
-
-        // delivery already fully invoiced) - the outcome is only in the
-
-        // response body's own Status/Message, not the HTTP status code, so
-
-        // that's what drives the success/error box.
-
         _showSchemeBillingResult(oResult) {
-
-            // eslint-disable-next-line no-param-reassign
-
             oResult = oResult || {};
 
             var sStatus = String(oResult.ProcessStatus || "UNKNOWN").toUpperCase();
-
             var aLines = ["Status: " + sStatus];
 
             if (oResult.CurrentStep) { aLines.push("Current step: " + oResult.CurrentStep); }
-
             ["PreliminaryBillingDocument", "PricingDocument", "FinalBillingDocument"].forEach(function (sField) {
-
                 if (oResult[sField]) { aLines.push(sField + ": " + oResult[sField]); }
-
             });
 
             var bFailed = sStatus === "ERROR" || sStatus === "FAILED" || sStatus === "FAILURE";
 
             ["CreatePBD", "Discount1", "Discount2"].forEach(function (sStep) {
-
                 var sStepStatus = String(oResult[sStep + "Status"] || "").toUpperCase();
-
                 if (["ERROR", "FAILED", "FAILURE"].indexOf(sStepStatus) !== -1) { bFailed = true; }
-
                 if (sStepStatus || oResult[sStep + "Message"]) {
-
                     aLines.push(sStep + " [" + sStepStatus + "]: " + (oResult[sStep + "Message"] || ""));
-
                 }
 
             });
 
             (oResult.SAP__Messages || []).forEach(function (oMessage) {
-
                 if (oMessage.message) { aLines.push(oMessage.message); }
-
             });
 
             var sMessage = aLines.join("\n\n");
 
             if (bFailed) {
-
                 MessageBox.error(sMessage, { title: "Billing failed" });
-
             } else if (sStatus === "SUCCESS") {
-
                 this.getView().getModel().setProperty("/postingComplete", true);
-
                 MessageBox.success(sMessage, { title: "Billing successful" });
-
             } else {
-
                 MessageBox.warning(sMessage, { title: "Billing status not confirmed" });
-
             }
-
         },
-
-
-
         _buildSchemeBillingPayload() {
-
             var oModel = this.getView().getModel();
-
             var aItems = oModel.getProperty("/items") || [];
-
             var aBillingItems = oModel.getProperty("/billingItems") || [];
-
             var oScheme = oModel.getProperty("/schemeDetails") || {};
-
             var aSchemes = oScheme.SelectedSchemes || [oScheme];
-
             var fDiscount1 = this._parsePercent(oScheme.Discount1) * 100;
-
             var mSeen = {};
-
             var aDeliveries = [];
-
             var aPostItems = aItems.map(function (oItem, iIndex) {
-
                 var oBill = aBillingItems[iIndex] || {};
-
                 var fQty = Number(oItem.quantityinbaseunit) || 0;
-
                 if (!mSeen[oItem.deliveryNumber]) {
-
                     mSeen[oItem.deliveryNumber] = true;
-
                     aDeliveries.push({
-
                         DeliveryDocument: oItem.deliveryNumber,
-
                         BillingDocumentType: "",
-
                         BillingDocumentDate: oItem.billingDocumentDate || "",
-
                         SalesOrganization: oItem.salesOrganization || "",
-
                         DestinationCountry: oItem.destinationCountry || "",
-
                         SDDocumentCategory: "J",
-
                         Customer: oItem.customerId || ""
-
                     });
 
                 }
 
                 return {
-
                     DeliveryDocument: oItem.deliveryNumber,
-
                     DeliveryDocumentItem: "",
-
                     Product: oItem.product || "",
-
                     ProductDescription: "",
-
                     Customer: oItem.customerId || "",
-
                     Color: oItem.color || "",
-
                     ProductSize: oItem.size || "",
-
                     Brand: oItem.brand || "",
-
                     HSNCode: oItem.hsnCode || "",
-
                     Bag: String(oItem.unit).toUpperCase() === "BAG" ? oItem.qty : oItem.bag,
-
                     Pack: oItem.pack || 0,
-
                     Quantity: fQty,
-
                     QuantityUnit: oItem.actualUom || "",
-
                     OriginalRate: oItem.rate,
-
                     Discount1Percent: fDiscount1,
-
                     Discount1Amount: oScheme.SelectedSchemes ? oItem.rate * fDiscount1 / 100 : this._round2(oItem.rate * fDiscount1 / 100),
-
                     RateAfterDiscount1: oBill.rateAfterDisA,
-
                     ValueAfterDiscount1: oBill.valueAfterDisA,
-
                     Discount2Amount: oScheme.SelectedSchemes ? this._round8(oBill.discount2Amount) : this._round2(oBill.valueAfterDisA - oBill.valueAfterDisB),
-
                     RateAfterDiscount2: fQty ? Math.round((oBill.valueAfterDisB / fQty + Number.EPSILON) * 1000) / 1000 : 0,
-
                     ValueAfterDiscount2: oBill.valueAfterDisB,
-
                     GSTPercent: oBill.gstRate,
-
                     GSTAmount: oBill.gstValue,
-
                     FinalRate: fQty ? Math.round((oBill.total / fQty + Number.EPSILON) * 1000) / 1000 : 0,
-
                     FinalAmount: oBill.total
-
                 };
-
             }.bind(this));
-
             var sum = function (sField) {
-
                 return this._round2(aPostItems.reduce(function (fTotal, oItem) {
-
                     return fTotal + (oItem[sField] || 0);
-
                 }, 0));
-
             }.bind(this);
-
             return {
-
                 SchemeType: String(oScheme.SchemeType || oModel.getProperty("/schemeType") || "").toUpperCase(),
-
                 TransactionCurrency: aItems.length ? aItems[0].transactionCurrency || "" : "",
-
                 Discount1Percent: fDiscount1,
-
                 Discount2Amount: oScheme.SelectedSchemes ? oModel.getProperty("/schemeDetails").Discount2Amount : sum("Discount2Amount"),
-
                 BillingTotal: oScheme.SelectedSchemes ? oModel.getProperty("/taxableTotal") : sum("ValueAfterDiscount2"),
-
                 GSTAmount: oScheme.SelectedSchemes ? oModel.getProperty("/gstTotal") : sum("GSTAmount"),
-
                 GrandTotal: oScheme.SelectedSchemes ? oModel.getProperty("/billingTotal") : sum("FinalAmount"),
-
                 _Deliveries: aDeliveries,
-
                 _Schemes: aSchemes.map(function (oSelected, iIndex) {
-
                     var fAdvance = Math.abs(this._parseAmount(oSelected.AdvAmount));
-
                     var fDis2 = this._parsePercent(oSelected.Discount2) * 100;
-
                     return {
-
                         accountingdocument: oSelected.AccountingDocument || "",
-
                         SchemeName: oSelected.SchemeName || "",
-
                         Discount1Percent: this._parsePercent(oSelected.Discount1) * 100,
-
                         Discount2Percent: fDis2,
-
                         AdvanceAmount: fAdvance,
-
                         CalculatedDiscount2Amount: oScheme.SchemeCalculations ?
-
                             oScheme.SchemeCalculations[iIndex].CalculatedDiscount2Amount : this._round2(fAdvance * fDis2 / 100)
-
                     };
-
                 }.bind(this)),
-
                 _Items: aPostItems
 
             };
-
         },
-
-
-
         _postSchemeBilling(oPayload) {
-
-            // This action expects the payload as the raw request body, not
-
-            // wrapped under a named OData action parameter - so the OData v4
-
-            // model's operation-binding API (bindContext/setParameter, which
-
-            // always wraps parameters per protocol) can't send it correctly.
-
-            // A plain POST is used instead; SAP Gateway still enforces CSRF
-
-            // on it, so a token is fetched first.
-
             var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
-
             var sActionUrl = sServiceUri + "BillingScheme";
 
-
-
             return this._fetchCsrfToken(sServiceUri).then(function (sToken) {
-
                 return fetch(sActionUrl, {
-
                     method: "POST",
-
                     headers: {
-
                         "Content-Type": "application/json",
-
                         "Accept": "application/json",
-
                         "X-CSRF-Token": sToken
-
                     },
-
                     body: JSON.stringify(oPayload)
-
                 });
 
             }).then(function (oResponse) {
-
                 if (!oResponse.ok) {
-
                     return oResponse.text().then(function (sText) {
-
                         throw new Error(this._extractErrorMessage(sText) || ("HTTP " + oResponse.status));
-
                     }.bind(this));
 
                 }
-
-
-
                 return oResponse.status === 204 ? null : oResponse.json();
-
             }.bind(this));
-
         },
-
-
-
-        // Prefer the backend's own error text (either this action's
-
-        // {Message: ...} shape or the standard OData {error: {message}}
-
-        // shape) over the raw HTTP status/body.
 
         _extractErrorMessage(sText) {
-
             if (!sText) {
-
                 return "";
-
             }
-
-
 
             try {
-
                 var oBody = JSON.parse(sText);
-
-
-
                 return oBody.Message ||
-
                     (oBody.error && oBody.error.message && oBody.error.message.value) ||
-
                     (oBody.error && oBody.error.message) ||
-
                     sText;
 
-            // eslint-disable-next-line no-unused-vars
-
             } catch (e) {
-
                 return sText;
-
             }
-
         },
-
-
-
         _fetchCsrfToken(sServiceUri) {
-
             return fetch(sServiceUri + "$metadata", {
-
                 method: "GET",
-
                 headers: { "X-CSRF-Token": "Fetch" }
-
             }).then(function (oResponse) {
-
                 return oResponse.headers.get("X-CSRF-Token") || "";
-
             });
-
         }
-
     });
-
 });
