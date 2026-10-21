@@ -2398,7 +2398,7 @@ sap.ui.define([
                     return fTotal + (oItem[sField] || 0);
                 }, 0));
             }.bind(this);
-            return {
+            var oPayload = {
                 SchemeType: String(oScheme.SchemeType || oModel.getProperty("/schemeType") || "").toUpperCase(),
                 TransactionCurrency: aItems.length ? aItems[0].transactionCurrency || "" : "",
                 Discount1Percent: fDiscount1,
@@ -2423,12 +2423,50 @@ sap.ui.define([
                 _Items: aPostItems
 
             };
+
+            return oPayload;
+        },
+        _prepareSchemeBillingPayload(oPayload) {
+            var oMetaModel = this.getView().getModel("deliveryService").getMetaModel();
+            var fnPrepare = function (oEntry, sPath) {
+                return oMetaModel.requestObject(sPath + "/").then(function (oType) {
+                    if (!oType) {
+                        throw new Error("Could not read billing field precision from service metadata: " + sPath);
+                    }
+                    var oPrepared = {};
+                    return Promise.all(Object.keys(oEntry).map(function (sField) {
+                        var vValue = oEntry[sField];
+                        var oProperty = oType[sField];
+                        if (Array.isArray(vValue)) {
+                            return Promise.all(vValue.map(function (oChild) {
+                                return fnPrepare(oChild, sPath + "/" + sField);
+                            })).then(function (aChildren) { oPrepared[sField] = aChildren; });
+                        }
+                        if (oProperty && oProperty.$Type === "Edm.Decimal" && vValue !== null && vValue !== undefined) {
+                            var iScale = oProperty.$Scale === undefined ? 0 : oProperty.$Scale;
+                            var fValue = Number(vValue);
+                            if (!Number.isFinite(fValue)) {
+                                throw new Error("Invalid numeric value for " + sPath + "/" + sField);
+                            }
+                            // Fixed scales come from metadata; variable scales retain their precision.
+                            vValue = typeof iScale === "number" ? Number(fValue.toFixed(iScale)) : fValue;
+                        }
+                        oPrepared[sField] = vValue;
+                        return Promise.resolve();
+                    })).then(function () { return oPrepared; });
+                });
+            };
+            return fnPrepare(oPayload, "/BillingScheme");
         },
         _postSchemeBilling(oPayload) {
             var sServiceUri = this.getOwnerComponent().getManifestEntry("/sap.app/dataSources/deliveryService/uri");
             var sActionUrl = sServiceUri + "BillingScheme";
 
-            return this._fetchCsrfToken(sServiceUri).then(function (sToken) {
+            return Promise.all([
+                this._fetchCsrfToken(sServiceUri),
+                this._prepareSchemeBillingPayload(oPayload)
+            ]).then(function (aResults) {
+                var sToken = aResults[0];
                 return fetch(sActionUrl, {
                     method: "POST",
                     headers: {
@@ -2436,7 +2474,7 @@ sap.ui.define([
                         "Accept": "application/json",
                         "X-CSRF-Token": sToken
                     },
-                    body: JSON.stringify(oPayload)
+                    body: JSON.stringify(aResults[1])
                 });
 
             }).then(function (oResponse) {
