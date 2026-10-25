@@ -29,7 +29,7 @@
                             level="H2" />
 
                         <Text
-                            text="Create billing scheme from delivery documents"
+                            text="Create Invoices from delivery documents"
                             class="zbsPageSubtitle" />
                     </VBox>
                 </f:heading>
@@ -139,16 +139,16 @@
                                 change=".onSchemeTypeChange">
 
                                 <core:Item
-                                    key=""
-                                    text="Clear" />
-
-                                <core:Item
                                     key="regular"
                                     text="Regular" />
 
                                 <core:Item
                                     key="advance"
-                                    text="Advance" />
+                                    text="WSP Advance" />
+
+                                <core:Item
+                                    key="npAdvance"
+                                    text="NP Advance" />
 
                             </Select>
 
@@ -639,7 +639,7 @@
                                 demandPopin="true"
                                 importance="Medium">
 
-                                <Text text="{= ${/schemeType} === 'advance' ? 'Dis 2 (' + ${/transactionCurrency} + ')' : 'Dis 2 (%)' }" />
+                                <Text text="{= (${/schemeType} === 'advance' || ${/schemeType} === 'npAdvance') ? 'Dis 2 (' + ${/transactionCurrency} + ')' : 'Dis 2 (%)' }" />
 
                             </Column>
 

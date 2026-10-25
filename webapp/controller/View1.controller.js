@@ -13,8 +13,9 @@ sap.ui.define([
     "sap/m/Label",
     "sap/m/Text",
     "sap/m/Column",
-    "sap/m/ColumnListItem"
-], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem, TableColumn, Label, Text, MobileColumn, ColumnListItem) => {
+    "sap/m/ColumnListItem",
+    "sap/m/Table"
+], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem, TableColumn, Label, Text, MobileColumn, ColumnListItem, MobileTable) => {
     "use strict";
     return Controller.extend("com.zeel.billingscheme.billingscheme.controller.View1", {
         onInit() {
@@ -37,7 +38,7 @@ sap.ui.define([
 
                 schemeDetails: null,
 
-                schemeType: "",
+                schemeType: "regular",
 
                 schemeSelectedText: "",
 
@@ -227,7 +228,7 @@ sap.ui.define([
 
             oModel.setProperty("/schemeDetails", null);
 
-            oModel.setProperty("/schemeType", "");
+            oModel.setProperty("/schemeType", "regular");
 
             this._mDeliveryGroupInfo = {};
 
@@ -367,6 +368,13 @@ sap.ui.define([
 
 
 
+            var sDeliverySelection = JSON.stringify(oInput.getTokens().map(function (oToken) {
+                return oToken.getKey();
+            }).sort());
+            if (this._sDeliverySelection !== sDeliverySelection) {
+                this._sDeliverySelection = sDeliverySelection;
+                this._resetDeliveryScheme();
+            }
             oModel.setProperty("/hasDeliveryNumbers", oInput.getTokens().length > 0);
 
         },
@@ -919,6 +927,17 @@ sap.ui.define([
 
 
 
+        _resetDeliveryScheme() {
+            this._iSchemeContext = (this._iSchemeContext || 0) + 1;
+            var oModel = this.getView().getModel();
+            oModel.setProperty("/schemeType", "regular");
+            oModel.setProperty("/schemeDetails", null);
+            oModel.setProperty("/schemeSelectedText", "");
+            oModel.setProperty("/schemeSummaryText", "");
+            oModel.setProperty("/hasSchemeDetails", false);
+            this._rebuildBillingItems();
+        },
+
         onFetchItems() {
 
             var oInput = this.byId("deliveryInput");
@@ -953,6 +972,7 @@ sap.ui.define([
 
 
 
+            this._resetDeliveryScheme();
             BusyIndicator.show(0);
 
 
@@ -1321,11 +1341,12 @@ sap.ui.define([
 
 
 
-        onSchemeTypeChange(oEvent) {
+        async onSchemeTypeChange(oEvent) {
 
             var oModel = this.getView().getModel();
 
             var sType = oEvent.getSource().getSelectedKey();
+            var iSchemeContext = this._iSchemeContext = (this._iSchemeContext || 0) + 1;
 
             oModel.setProperty("/schemeType", sType);
 
@@ -1339,6 +1360,32 @@ sap.ui.define([
 
             this._rebuildBillingItems();
 
+            if (sType === "advance") {
+                var sCustomerId = this._getSelectedCustomerId();
+                if (!sCustomerId) {
+                    MessageToast.show("Please fetch delivery items first to determine the customer.");
+                    return;
+                }
+
+                var oView = this.getView();
+                oView.setBusy(true);
+                try {
+                    var aSchemes = await this._readSchemes(sCustomerId, sType);
+                    if (this._iSchemeContext !== iSchemeContext || oModel.getProperty("/schemeType") !== sType ||
+                        this._getSelectedCustomerId() !== sCustomerId) {
+                        return;
+                    }
+                    this._applySelectedSchemes(aSchemes);
+                    if (!aSchemes.length) {
+                        MessageToast.show("No WSP Advance schemes found for this customer.");
+                    }
+                } catch (oError) {
+                    MessageBox.error("Could not fetch schemes: " + (oError && oError.message ? oError.message : oError));
+                } finally {
+                    oView.setBusy(false);
+                }
+            }
+
         },
 
 
@@ -1348,6 +1395,7 @@ sap.ui.define([
             var oView = this.getView();
 
             var sSchemeType = oView.getModel().getProperty("/schemeType");
+            var iSchemeContext = this._iSchemeContext;
 
             var sCustomerId = this._getSelectedCustomerId();
 
@@ -1363,7 +1411,7 @@ sap.ui.define([
 
 
 
-            if (sSchemeType === "advance" && !sCustomerId) {
+            if ((sSchemeType === "advance" || sSchemeType === "npAdvance") && !sCustomerId) {
 
                 MessageToast.show("Please fetch delivery items first to determine the customer.");
 
@@ -1389,6 +1437,15 @@ sap.ui.define([
 
                     oDialog.setModel(new JSONModel([]), "schemes");
 
+                    // Use explicit selection controls on every screen size.
+                    // The generated desktop grid has no radio-button mode.
+                    oDialog.setTable(new MobileTable({
+                        mode: "MultiSelect",
+                        includeItemInSelection: true,
+                        growing: true,
+                        growingThreshold: 100
+                    }));
+
                     return oDialog.getTableAsync().then(function (oTable) {
 
                         this._oSchemeValueHelpTable = oTable;
@@ -1404,6 +1461,10 @@ sap.ui.define([
 
 
             this._pSchemeValueHelpDialog.then(function (oDialog) {
+                if (this._iSchemeContext !== iSchemeContext) {
+                    return;
+                }
+                oDialog._iSchemeContext = iSchemeContext;
 
                 oDialog.getModel("schemes").setData([]);
 
@@ -1419,9 +1480,13 @@ sap.ui.define([
 
 
 
-                (sSchemeType === "regular" ? this._readRegularSchemes() : this._readSchemes(sCustomerId))
+                (sSchemeType === "regular" ? this._readRegularSchemes() : this._readSchemes(sCustomerId, sSchemeType))
 
                     .then(function (aSchemes) {
+                        if (this._iSchemeContext !== iSchemeContext) {
+                            oDialog.close();
+                            return;
+                        }
 
                         aSchemes = aSchemes.map(function (oScheme) {
 
@@ -1433,7 +1498,8 @@ sap.ui.define([
 
                         var oDetails = oView.getModel().getProperty("/schemeDetails");
 
-                        var aSelected = oDetails ? (oDetails.SelectedSchemes || [oDetails]) : [];
+                        var aSelected = oDetails ? (oDetails.SelectedSchemes || [oDetails]) :
+                            (sSchemeType === "advance" ? aSchemes : []);
 
                         var aKeys = aSelected.map(this._getSchemeValueHelpKey.bind(this));
 
@@ -1523,7 +1589,7 @@ sap.ui.define([
 
 
 
-        _readSchemes(sCustomerId) {
+        _readSchemes(sCustomerId, sSchemeType) {
 
             // The backend's Scheme entity set fans out one row per Customer
 
@@ -1553,7 +1619,17 @@ sap.ui.define([
 
 
 
-            var sFilter = sCustomerId ? "?$filter=Customer eq '" + String(sCustomerId).replace(/'/g, "''") + "'" : "";
+            var aFilters = [];
+
+            if (sCustomerId) {
+                aFilters.push("Customer eq '" + String(sCustomerId).replace(/'/g, "''") + "'");
+            }
+
+            aFilters.push(sSchemeType === "npAdvance" ?
+                "scheme_type eq 'NP ADVANCE'" :
+                "(scheme_type eq 'ADVANCE' or scheme_type eq 'WSP ADVANCE')");
+
+            var sFilter = "?$filter=" + encodeURIComponent(aFilters.join(" and "));
 
             var sUrl = sServiceUri + "Scheme" + sFilter;
 
@@ -1653,6 +1729,15 @@ sap.ui.define([
 
         _configureSchemeValueHelpTable(oDialog, sType) {
 
+            var bMultiselect = sType === "advance" || sType === "npAdvance";
+            oDialog.setSupportMultiselect(bMultiselect);
+            var oTable = this._oSchemeValueHelpTable;
+            if (oTable.setSelectionMode) {
+                oTable.setSelectionMode(bMultiselect ? "MultiToggle" : "Single");
+            } else {
+                oTable.setMode(bMultiselect ? "MultiSelect" : "SingleSelectLeft");
+            }
+
             var aFields = sType === "regular" ? [
 
                 ["SchemeName", "Scheme Name", "64%"],
@@ -1683,7 +1768,7 @@ sap.ui.define([
 
         onSchemeValueHelpSearch() {
 
-            var bAdvance = this.getView().getModel().getProperty("/schemeType") === "advance";
+            var bAdvance = ["advance", "npAdvance"].includes(this.getView().getModel().getProperty("/schemeType"));
 
             var oDatePicker = this.byId("schemeFilterPostingDate");
 
@@ -1731,11 +1816,11 @@ sap.ui.define([
 
         onSchemeValueHelpConfirm(oEvent) {
 
-            var oModel = this.getView().getModel();
-
-            var bAdvance = oModel.getProperty("/schemeType") === "advance";
-
             var oDialog = oEvent.getSource();
+            if (oDialog._iSchemeContext !== this._iSchemeContext) {
+                oDialog.close();
+                return;
+            }
 
             var aAvailable = oDialog.getModel("schemes").getData();
 
@@ -1747,7 +1832,12 @@ sap.ui.define([
 
             oDialog.close();
 
+            this._applySelectedSchemes(aSchemes);
+        },
 
+        _applySelectedSchemes(aSchemes) {
+            var oModel = this.getView().getModel();
+            var bAdvance = ["advance", "npAdvance"].includes(oModel.getProperty("/schemeType"));
 
             if (!aSchemes.length) {
 
@@ -1767,19 +1857,14 @@ sap.ui.define([
 
 
 
-            var oSchemeDetails = bAdvance ? this._combineAdvanceSchemes(aSchemes) : aSchemes[0];
+            var oSchemeDetails = bAdvance ? this._combineAdvanceSchemes(aSchemes, oModel.getProperty("/schemeType")) : aSchemes[0];
 
 
 
             oModel.setProperty("/schemeDetails", oSchemeDetails);
-
             oModel.setProperty("/schemeSelectedText", oSchemeDetails.SchemeName + " (" + oSchemeDetails.SchemeType + ")");
-
             oModel.setProperty("/schemeSummaryText", this._formatSchemeSummary(oSchemeDetails));
-
             oModel.setProperty("/hasSchemeDetails", true);
-
-
 
             this._rebuildBillingItems();
             MessageToast.show("Scheme selected: " + oSchemeDetails.SchemeName);
@@ -1788,37 +1873,61 @@ sap.ui.define([
 
 
 
-        _combineAdvanceSchemes(aSchemes) {
-            // FIFO: oldest posting date first. On the same date, higher CD% first.
-            aSchemes = aSchemes.slice().sort(function (oFirst, oSecond) {
-                var iDate = String(oFirst.PostingDate || "9999-12-31")
-                    .localeCompare(String(oSecond.PostingDate || "9999-12-31"));
-                if (iDate !== 0) {
-                    return iDate;
-                }
-                return this._parsePercent(oSecond.Discount2) - this._parsePercent(oFirst.Discount2);
-            }.bind(this));
+     _combineAdvanceSchemes(aSchemes, sSchemeType) {
 
-            var fMaxDiscount1 = 0;
-            var fAdvance = 0;
-            aSchemes.forEach(function (oScheme) {
-                fMaxDiscount1 = Math.max(fMaxDiscount1, this._parsePercent(oScheme.Discount1) * 100);
-                fAdvance += Math.abs(this._parseAmount(oScheme.AdvAmount));
-            }.bind(this));
+    // Priority:
+    // WSP: highest Discount 2 first, then oldest Posting Date.
+    // NP: oldest Posting Date first, regardless of Discount 2.
 
-            return {
-                SchemeName: aSchemes.map(function (oScheme) { return oScheme.SchemeName; }).join(", "),
-                SchemeType: "ADVANCE",
-                Discount1: fMaxDiscount1 + "%",
-                Discount2: "0%",
-                Discount2Amount: 0,
-                AdvAmount: this._round2(fAdvance),
-                Currency: aSchemes[0].Currency || "INR",
-                SelectedSchemes: aSchemes,
-                SchemeCalculations: []
-            };
-        },
+    aSchemes = aSchemes.slice().sort(function (oFirst, oSecond) {
 
+        var fFirstDiscount2 = this._parsePercent(oFirst.Discount2);
+        var fSecondDiscount2 = this._parsePercent(oSecond.Discount2);
+
+        // Highest Discount 2 first
+        if (sSchemeType !== "npAdvance" && fFirstDiscount2 !== fSecondDiscount2) {
+            return fSecondDiscount2 - fFirstDiscount2;
+        }
+
+        // NP, or equal WSP Discount 2: oldest Posting Date first
+        return String(oFirst.PostingDate || "9999-12-31")
+            .localeCompare(
+                String(oSecond.PostingDate || "9999-12-31")
+            );
+
+    }.bind(this));
+
+    var fMaxDiscount1 = 0;
+    var fAdvance = 0;
+
+    aSchemes.forEach(function (oScheme) {
+
+        fMaxDiscount1 = Math.max(
+            fMaxDiscount1,
+            this._parsePercent(oScheme.Discount1) * 100
+        );
+
+        fAdvance += Math.abs(
+            this._parseAmount(oScheme.AdvAmount)
+        );
+
+    }.bind(this));
+
+    return {
+        SchemeName: aSchemes.map(function (oScheme) {
+            return oScheme.SchemeName;
+        }).join(", "),
+
+        SchemeType: "ADVANCE",
+        Discount1: fMaxDiscount1 + "%",
+        Discount2: "0%",
+        Discount2Amount: 0,
+        AdvAmount: this._round2(fAdvance),
+        Currency: aSchemes[0].Currency || "INR",
+        SelectedSchemes: aSchemes,
+        SchemeCalculations: []
+    };
+},
         _calculateAdvanceDiscount2(aSchemes, fNetValue, fGstRate) {
             // Source: SAP Scheme CD Working (2).xlsx, "With GST".
             // H12 = NetAfterDiscount1 * (1 + GST)
@@ -2216,7 +2325,7 @@ sap.ui.define([
 
         _formatDiscount2(sValue, sSchemeType) {
 
-            return sSchemeType === "advance" ? sValue : this._formatPercent(sValue);
+            return (sSchemeType === "advance" || sSchemeType === "npAdvance") ? sValue : this._formatPercent(sValue);
 
         },
 
