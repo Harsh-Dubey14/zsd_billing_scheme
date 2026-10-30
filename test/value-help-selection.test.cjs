@@ -4,9 +4,10 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { test } = require("node:test");
 
-function loadController() {
+function loadController(environment = {}) {
     let controller;
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../webapp/controller/View1.controller.js"), "utf8"), {
+        ...environment,
         sap: { ui: { define(deps, factory) {
             controller = factory({ extend: (name, methods) => methods });
         } } }
@@ -136,4 +137,64 @@ test("mobile value help restores checked rows and clears stale selections", () =
     assert.deepEqual(items.map(item => item.selected), [true, false]);
     controller._restoreValueHelpSelection({ getKey: () => "DeliveryDocument" }, table, []);
     assert.deepEqual(items.map(item => item.selected), [false, false]);
+});
+
+
+test("WSP auto-selection stops at positive carry forward and leaves later schemes unchecked", () => {
+    const controller = loadController();
+    const items = [{ rate: 150, quantityinbaseunit: 1, gstRate: 0 }];
+    controller.getView = () => ({ getModel: () => ({ getProperty: () => items }) });
+    const schemes = [
+        { SchemeName: "Third", PostingDate: "2026-03-01", Discount1: "0%", Discount2: "0%", AdvAmount: 100 },
+        { SchemeName: "First", PostingDate: "2026-01-01", Discount1: "0%", Discount2: "0%", AdvAmount: 100 },
+        { SchemeName: "Second", PostingDate: "2026-02-01", Discount1: "0%", Discount2: "0%", AdvAmount: 100 }
+    ];
+    const names = () => controller._getWspAutoSelectedSchemes(schemes).map(row => row.SchemeName).join(",");
+    assert.equal(names(), "First,Second");
+    items[0].rate = 50;
+    assert.equal(names(), "First");
+    // Exactly zero carry forward must include the next scheme.
+    items[0].rate = 100;
+    assert.equal(names(), "First,Second");
+    items[0].rate = 400;
+    assert.equal(names(), "First,Second,Third");
+    assert.equal(schemes[0].SchemeName, "Third");
+});
+
+test("WSP auto-selection uses Discount 2 priority, selected Discount 1 and GST", () => {
+    const controller = loadController();
+    controller.getView = () => ({ getModel: () => ({ getProperty: () =>
+        [{ rate: 200, quantityinbaseunit: 1, gstRate: 5 }] }) });
+    const schemes = [
+        { SchemeName: "Low", Discount1: "99%", Discount2: "0%", AdvAmount: 1000 },
+        { SchemeName: "High", Discount1: "0%", Discount2: "10.8%", AdvAmount: 100 },
+        { SchemeName: "Middle", Discount1: "10%", Discount2: "8.7%", AdvAmount: 100 }
+    ];
+    assert.equal(controller._getWspAutoSelectedSchemes(schemes).map(row => row.SchemeName).join(","), "High,Middle");
+});
+
+
+test("WSP lookup requests both types and keeps WSP records on subsequent pages", async () => {
+    const urls = [];
+    const row = { AccountingDocument: "123", AccountingDocumentItem: "1", Customer: "C1", Amount: 100 };
+    const controller = loadController({
+        URL,
+        document: { baseURI: "https://example.test/app/" },
+        fetch: async url => {
+            urls.push(url);
+            return { ok: true, json: async () => urls.length === 1 ? {
+                value: [{ ...row, scheme_type: "ADVANCE" }],
+                "@odata.nextLink": "Scheme?$skiptoken=next"
+            } : { value: [
+                { ...row, scheme_type: "WSP ADVANCE" },
+                { ...row, scheme_type: "WSP ADVANCE" }
+            ] } };
+        }
+    });
+    controller.getOwnerComponent = () => ({ getManifestEntry: () => "/service/" });
+    const schemes = await controller._readSchemes("C1", "advance");
+    const filter = new URL(urls[0], "https://example.test").searchParams.get("$filter");
+    assert.equal(filter, "Customer eq 'C1' and (scheme_type eq 'ADVANCE' or scheme_type eq 'WSP ADVANCE')");
+    assert.equal(urls[1], "https://example.test/service/Scheme?$skiptoken=next");
+    assert.equal(schemes.map(row => row.SchemeType).join(","), "ADVANCE,WSP ADVANCE");
 });

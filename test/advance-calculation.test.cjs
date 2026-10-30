@@ -321,3 +321,19 @@ test("delivery validation reports every blocked document once and accepts valid 
         {DeliveryDocument: "429", PGIDate: "2026-09-28", InvoiceStatus: ""}
     ])), "");
 });
+
+
+test("processing, scheduled and skipped responses count as success unless a step fails", () => {
+    for (const status of ["SUCCESS", "PROCESSING", "JOB_SCHEDULED", "SKIPPED", " processing "]) {
+        const { controller, messages } = setup([], [{}]);
+        const state = {};
+        controller.getView = () => ({ getModel: () => ({ getProperty: key => state[key], setProperty: (key, value) => { state[key] = value; } }) });
+        controller._showSchemeBillingResult({ ProcessStatus: status, Discount1Status: "SKIPPED" });
+        assert.equal(messages.at(-1).kind, "success");
+        assert.equal(state["/postingComplete"], true);
+        state["/postingComplete"] = false;
+        controller._showSchemeBillingResult({ ProcessStatus: status, Discount2Status: "ERROR" });
+        assert.equal(messages.at(-1).kind, "error");
+        assert.equal(state["/postingComplete"], false);
+    }
+});

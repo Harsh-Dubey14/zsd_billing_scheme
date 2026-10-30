@@ -1,3 +1,5 @@
+
+/* eslint-disable max-params */
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/core/Fragment",
@@ -15,7 +17,11 @@ sap.ui.define([
     "sap/m/Column",
     "sap/m/ColumnListItem",
     "sap/m/Table"
-], (Controller, Fragment, BusyIndicator, JSONModel, Filter, FilterOperator, Token, MessageToast, MessageBox, GroupHeaderListItem, TableColumn, Label, Text, MobileColumn, ColumnListItem, MobileTable) => {
+], (Controller, Fragment, BusyIndicator, 
+    JSONModel, Filter, FilterOperator, Token,
+     MessageToast, MessageBox, GroupHeaderListItem,
+      TableColumn, Label, Text, MobileColumn, ColumnListItem,
+       MobileTable) => {
     "use strict";
     return Controller.extend("com.zeel.billingscheme.billingscheme.controller.View1", {
         onInit() {
@@ -25,6 +31,10 @@ sap.ui.define([
                 items: [],
 
                 postingComplete: false,
+                clearingAvailable: false,
+                clearing: false,
+                clearingComplete: false,
+                clearingPayload: null,
 
                 posting: false,
 
@@ -217,6 +227,10 @@ sap.ui.define([
 
 
             oModel.setProperty("/postingComplete", false);
+            oModel.setProperty("/clearingAvailable", false);
+            oModel.setProperty("/clearing", false);
+            oModel.setProperty("/clearingComplete", false);
+            oModel.setProperty("/clearingPayload", null);
 
             oModel.setProperty("/items", []);
 
@@ -928,6 +942,7 @@ sap.ui.define([
 
 
         _resetDeliveryScheme() {
+            this._iAdvanceCheckContext = (this._iAdvanceCheckContext || 0) + 1;
             this._iSchemeContext = (this._iSchemeContext || 0) + 1;
             var oModel = this.getView().getModel();
             oModel.setProperty("/schemeType", "regular");
@@ -977,7 +992,8 @@ sap.ui.define([
 
 
 
-            this._readDeliveryItems(aDeliveryNumbers)
+            // eslint-disable-next-line consistent-return
+            return this._readDeliveryItems(aDeliveryNumbers)
 
                 .then(function (aAllItems) {
 
@@ -1023,6 +1039,9 @@ sap.ui.define([
 
                     );
 
+                    // eslint-disable-next-line consistent-return
+                    return this._warnCustomerAdvances();
+
                 }.bind(this))
 
                 .catch(function (oError) {
@@ -1040,6 +1059,39 @@ sap.ui.define([
         },
 
 
+
+        async _warnCustomerAdvances() {
+            var sCustomerId = this._getSelectedCustomerId();
+            var iContext = this._iAdvanceCheckContext;
+            if (!sCustomerId || !this.getView().getModel().getProperty("/items").length) {
+                return;
+            }
+            /* global Promise */
+            var aResults = await Promise.allSettled([
+                this._readSchemes(sCustomerId, "advance"),
+                this._readSchemes(sCustomerId, "npAdvance")
+            ]);
+            if (this._iAdvanceCheckContext !== iContext || this._getSelectedCustomerId() !== sCustomerId) {
+                return;
+            }
+
+            var bWsp = aResults[0].status === "fulfilled" && aResults[0].value.length > 0;
+            var bNp = aResults[1].status === "fulfilled" && aResults[1].value.length > 0;
+            var bFailed = aResults.some(function (oResult) { return oResult.status === "rejected"; });
+            if (bWsp || bNp) {
+                // eslint-disable-next-line no-nested-ternary
+                var sAdvance = bWsp ? (bNp ? "WSP and NP advances are" : "WSP advance is") : "NP advance is";
+                MessageBox.warning(sAdvance + " available for the selected customer (" + sCustomerId + "). " +
+                    (bWsp ? "WSP advance has priority. " : "") +
+                    "You can select any scheme as per your preference." +
+                    (bFailed ? " Availability of the other advance type could not be checked." : ""), {
+                    title: "Customer advance available"
+                });
+            } else if (bFailed) {
+                MessageBox.warning("Could not check advance availability for the selected customer. " +
+                    "You can still select a scheme as per your preference.");
+            }
+        },
 
         _getDeliveryValidationError(aItems) {
 
@@ -1198,6 +1250,7 @@ sap.ui.define([
 
             this._mDeliveryGroupInfo = mGroupInfo;
 
+            // eslint-disable-next-line complexity
             var aItems = (aRawRows || []).map(function (oRow) {
 
                 var sDeliveryNumber = String(oRow.DeliveryDocument || "").padStart(10, "0");
@@ -1209,6 +1262,12 @@ sap.ui.define([
                     deliveryNumber: sDeliveryNumber,
 
                     deliveryDocumentItem: String(oRow.DeliveryDocumentItem || ""),
+
+                    Incoterm: oRow.Incoterm ?? "",
+
+                    paymentterm: oRow.paymentterm ?? "",
+
+                    PriceLevel: oRow.PriceLevel ?? "",
 
                     product: oRow.Product || "",
 
@@ -1269,12 +1328,13 @@ sap.ui.define([
                     return a.deliveryNumber < b.deliveryNumber ? -1 : 1;
 
                 }
+                // eslint-disable-next-line no-nested-ternary
                 return a.deliveryDocumentItem < b.deliveryDocumentItem ? -1 :
 
                     a.deliveryDocumentItem > b.deliveryDocumentItem ? 1 : 0;
 
             });
-
+ 
 
 
             aItems.forEach(function (oItem, iIndex) {
@@ -1375,7 +1435,7 @@ sap.ui.define([
                         this._getSelectedCustomerId() !== sCustomerId) {
                         return;
                     }
-                    this._applySelectedSchemes(aSchemes);
+                    this._applySelectedSchemes(this._getWspAutoSelectedSchemes(aSchemes));
                     if (!aSchemes.length) {
                         MessageToast.show("No WSP Advance schemes found for this customer.");
                     }
@@ -1488,6 +1548,7 @@ sap.ui.define([
                             return;
                         }
 
+                        // eslint-disable-next-line no-param-reassign
                         aSchemes = aSchemes.map(function (oScheme) {
 
                             return Object.assign({}, oScheme, { ValueHelpKey: this._getSchemeValueHelpKey(oScheme) });
@@ -1498,8 +1559,9 @@ sap.ui.define([
 
                         var oDetails = oView.getModel().getProperty("/schemeDetails");
 
+                        // eslint-disable-next-line no-nested-ternary
                         var aSelected = oDetails ? (oDetails.SelectedSchemes || [oDetails]) :
-                            (sSchemeType === "advance" ? aSchemes : []);
+                            (sSchemeType === "advance" ? this._getWspAutoSelectedSchemes(aSchemes) : []);
 
                         var aKeys = aSelected.map(this._getSchemeValueHelpKey.bind(this));
 
@@ -1635,23 +1697,24 @@ sap.ui.define([
 
 
 
-            return fetch(sUrl, {
-
-                headers: { "Accept": "application/json" }
-
-            }).then(function (oResponse) {
-
+            var fnReadPage = async function (sPageUrl) {
+                var oResponse = await fetch(sPageUrl, {
+                    headers: { "Accept": "application/json" }
+                });
                 if (!oResponse.ok) {
-
                     throw new Error("HTTP " + oResponse.status);
-
                 }
-
-                return oResponse.json();
-
-            }).then(function (oData) {
-
+                var oData = await oResponse.json();
                 var aRows = (oData && oData.value) || [];
+                if (oData && oData["@odata.nextLink"]) {
+                    var sNextUrl = new URL(oData["@odata.nextLink"],
+                        new URL(sPageUrl, document.baseURI)).href;
+                    aRows = aRows.concat(await fnReadPage(sNextUrl));
+                }
+                return aRows;
+            };
+
+            return fnReadPage(sUrl).then(function (aRows) {
 
                 var mSeen = {};
 
@@ -1661,7 +1724,7 @@ sap.ui.define([
 
                 aRows.forEach(function (oRow) {
 
-                    var sDedupeKey = [oRow.AccountingDocument, oRow.AccountingDocumentItem, oRow.Customer].join("|");
+                    var sDedupeKey = [oRow.AccountingDocument, oRow.AccountingDocumentItem, oRow.Customer, oRow.scheme_type].join("|");
 
 
 
@@ -1835,6 +1898,32 @@ sap.ui.define([
             this._applySelectedSchemes(aSchemes);
         },
 
+        _getWspAutoSelectedSchemes(aSchemes) {
+            var aItems = this.getView().getModel().getProperty("/items") || [];
+            if (!aSchemes.length || !aItems.length) {
+                return [];
+            }
+
+            var aOrdered = this._combineAdvanceSchemes(aSchemes, "advance").SelectedSchemes;
+            var aSelected = [];
+            for (var i = 0; i < aOrdered.length; i++) {
+                aSelected.push(aOrdered[i]);
+                // Each added scheme can change the highest Discount 1.
+                // Calculate carry forward using only the selected prefix.
+                var oCombined = this._combineAdvanceSchemes(aSelected, "advance");
+                var fDiscount1 = this._parsePercent(oCombined.Discount1);
+                var fNetValue = aItems.reduce(function (fTotal, oItem) {
+                    return fTotal + (Number(oItem.rate) || 0) *
+                        (1 - fDiscount1) * (Number(oItem.quantityinbaseunit) || 0);
+                }, 0);
+                var oCalculation = this._calculateAdvanceDiscount2(aSelected, fNetValue, aItems[0].gstRate);
+                if (oCalculation.TotalAdvanceRemaining > 0) {
+                    break;
+                }
+            }
+            return aSelected;
+        },
+
         _applySelectedSchemes(aSchemes) {
             var oModel = this.getView().getModel();
             var bAdvance = ["advance", "npAdvance"].includes(oModel.getProperty("/schemeType"));
@@ -1879,6 +1968,7 @@ sap.ui.define([
     // WSP: highest Discount 2 first, then oldest Posting Date.
     // NP: oldest Posting Date first, regardless of Discount 2.
 
+    // eslint-disable-next-line no-param-reassign
     aSchemes = aSchemes.slice().sort(function (oFirst, oSecond) {
 
         var fFirstDiscount2 = this._parsePercent(oFirst.Discount2);
@@ -2039,6 +2129,7 @@ sap.ui.define([
 
              
 
+            // eslint-disable-next-line no-param-reassign
             oSchemeDetails = oSchemeDetails || {};
 
 
@@ -2091,6 +2182,7 @@ sap.ui.define([
         // Regular schemes retain their existing calculation formula.
         // ---------------------------------------------------------------
 
+        // eslint-disable-next-line max-statements
         _rebuildBillingItems() {
             var oModel = this.getView().getModel();
             var aItems = oModel.getProperty("/items") || [];
@@ -2203,6 +2295,7 @@ sap.ui.define([
                     transactionCurrency: oItem.transactionCurrency || "",
                     discount2: bAdvance ? this._formatAmount(fItemCD) + " " + (oItem.transactionCurrency || "") : oScheme.Discount2,
                     discount2Amount: fItemCD,
+                    // eslint-disable-next-line no-nested-ternary
                     discount2Percent: bAdvance ? (fAfterA > 0 ? fItemCD / fAfterA * 100 : 0) : fDisc2 * 100,
                     rateAfterDisA: fRateAfterA,
                     valueAfterDisA: fAfterA,
@@ -2412,9 +2505,10 @@ sap.ui.define([
         },
 
         _showSchemeBillingResult(oResult) {
+            // eslint-disable-next-line no-param-reassign
             oResult = oResult || {};
 
-            var sStatus = String(oResult.ProcessStatus || "UNKNOWN").toUpperCase();
+            var sStatus = String(oResult.ProcessStatus || "UNKNOWN").trim().toUpperCase();
             var aLines = ["Status: " + sStatus];
 
             if (oResult.CurrentStep) { aLines.push("Current step: " + oResult.CurrentStep); }
@@ -2425,7 +2519,7 @@ sap.ui.define([
             var bFailed = sStatus === "ERROR" || sStatus === "FAILED" || sStatus === "FAILURE";
 
             ["CreatePBD", "Discount1", "Discount2"].forEach(function (sStep) {
-                var sStepStatus = String(oResult[sStep + "Status"] || "").toUpperCase();
+                var sStepStatus = String(oResult[sStep + "Status"] || "").trim().toUpperCase();
                 if (["ERROR", "FAILED", "FAILURE"].indexOf(sStepStatus) !== -1) { bFailed = true; }
                 if (sStepStatus || oResult[sStep + "Message"]) {
                     aLines.push(sStep + " [" + sStepStatus + "]: " + (oResult[sStep + "Message"] || ""));
@@ -2441,13 +2535,102 @@ sap.ui.define([
 
             if (bFailed) {
                 MessageBox.error(sMessage, { title: "Billing failed" });
-            } else if (sStatus === "SUCCESS") {
+            } else if (["SUCCESS", "PROCESSING", "JOB_SCHEDULED", "SKIPPED"].includes(sStatus)) {
                 this.getView().getModel().setProperty("/postingComplete", true);
-                MessageBox.success(sMessage, { title: "Billing successful" });
+                var oModel = this.getView().getModel();
+                var bCanClear = sStatus === "JOB_SCHEDULED" &&
+                    ["advance", "npAdvance"].includes(oModel.getProperty("/schemeType"));
+                if (bCanClear) {
+                    oModel.setProperty("/clearingPayload", this._buildCustomerClearingPayload(oResult));
+                    oModel.setProperty("/clearingAvailable", true);
+                    oModel.setProperty("/clearingComplete", false);
+                }
+                MessageBox.success(sMessage, {
+                    title: "Billing successful",
+                    actions: bCanClear ? ["Clear Customer Account", "Close"] : ["Close"],
+                    onClose: function (sAction) {
+                        if (sAction === "Clear Customer Account") {
+                            this.onClearCustomerAccount();
+                        }
+                    }.bind(this)
+                });
             } else {
                 MessageBox.warning(sMessage, { title: "Billing status not confirmed" });
             }
         },
+        _buildCustomerClearingPayload(oResult) {
+            var oModel = this.getView().getModel();
+            var oScheme = oModel.getProperty("/schemeDetails") || {};
+            return {
+                BillingDocument: oResult.PreliminaryBillingDocument || "",
+                Customer: this._getSelectedCustomerId() || "",
+                InvoiceAmount: this._round2(Number(oModel.getProperty("/billingTotal")) || 0),
+                Advances: (oScheme.SelectedSchemes || []).map(function (oAdvance) {
+                    return {
+                        Document: oAdvance.AccountingDocument || "",
+                        Amount: this._round2(Math.abs(this._parseAmount(oAdvance.AdvAmount)))
+                    };
+                }.bind(this))
+            };
+        },
+
+        async onClearCustomerAccount() {
+            var oModel = this.getView().getModel();
+            if (!oModel.getProperty("/clearingAvailable") || oModel.getProperty("/clearing") ||
+                oModel.getProperty("/clearingComplete")) {
+                return;
+            }
+            var oPayload = oModel.getProperty("/clearingPayload");
+            if (!oPayload || !oPayload.BillingDocument || !oPayload.Customer ||
+                !oPayload.Advances.length || oPayload.Advances.some(function (oAdvance) { return !oAdvance.Document; })) {
+                MessageBox.error("Cannot clear customer account: PBD, customer or selected advance document is missing.");
+                return;
+            }
+            oModel.setProperty("/clearing", true);
+            try {
+                var oResult = await this._postCustomerClearing(oPayload);
+                var sStatus = String(oResult.Status || "").trim().toUpperCase();
+                var sMessage = (oResult.Message || "No message returned.") +
+                    "\n\nBilling Document: " + (oResult.BillingDocument || oPayload.BillingDocument);
+                if (sStatus === "S") {
+                    oModel.setProperty("/clearingComplete", true);
+                    MessageBox.success(sMessage, { title: "Customer account cleared" });
+                } else if (sStatus === "W") {
+                    MessageBox.warning(sMessage, { title: "Customer account clearing warning" });
+                } else {
+                    MessageBox.error(sMessage, { title: "Customer account clearing failed" });
+                }
+            } catch (oError) {
+                MessageBox.error("Could not clear customer account: " + oError.message);
+            } finally {
+                oModel.setProperty("/clearing", false);
+            }
+        },
+
+        async _postCustomerClearing(oPayload) {
+            // The existing /sap proxy routes this path to the configured S/4 host.
+            var sUrl = "/sap/bc/http/sap/zhttp_schemeclearing";
+            var oTokenResponse = await fetch(sUrl, {
+                method: "GET",
+                headers: { "X-CSRF-Token": "Fetch", "Accept": "application/json" }
+            });
+            if (!oTokenResponse.ok) {
+                throw new Error(this._extractErrorMessage(await oTokenResponse.text()) || ("HTTP " + oTokenResponse.status));
+            }
+            var mHeaders = { "Content-Type": "application/json", "Accept": "application/json" };
+            var sToken = oTokenResponse.headers.get("X-CSRF-Token");
+            if (sToken) { mHeaders["X-CSRF-Token"] = sToken; }
+            var oResponse = await fetch(sUrl, {
+                method: "POST",
+                headers: mHeaders,
+                body: JSON.stringify(oPayload)
+            });
+            if (!oResponse.ok) {
+                throw new Error(this._extractErrorMessage(await oResponse.text()) || ("HTTP " + oResponse.status));
+            }
+            return await oResponse.json();
+        },
+
         _buildSchemeBillingPayload() {
             var oModel = this.getView().getModel();
             var aItems = oModel.getProperty("/items") || [];
@@ -2457,6 +2640,7 @@ sap.ui.define([
             var fDiscount1 = this._parsePercent(oScheme.Discount1) * 100;
             var mSeen = {};
             var aDeliveries = [];
+            // eslint-disable-next-line complexity
             var aPostItems = aItems.map(function (oItem, iIndex) {
                 var oBill = aBillingItems[iIndex] || {};
                 var fQty = Number(oItem.quantityinbaseunit) || 0;
@@ -2609,6 +2793,7 @@ sap.ui.define([
                     (oBody.error && oBody.error.message) ||
                     sText;
 
+            // eslint-disable-next-line no-unused-vars
             } catch (e) {
                 return sText;
             }

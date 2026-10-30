@@ -6,31 +6,32 @@
     xmlns:f="sap.f"
     xmlns:l="sap.ui.layout"
     height="100%"
-    displayBlock="true">
-
+    displayBlock="true"
+>
     <f:DynamicPage
         id="page"
         fitContent="true"
         headerExpanded="true"
         toggleHeaderOnTitleClick="false"
         showFooter="true"
-        class="zbsDynamicPage">
-
+        class="zbsDynamicPage"
+    >
         <!-- ====================================================== -->
         <!-- PAGE TITLE                                             -->
         <!-- ====================================================== -->
         <f:title>
             <f:DynamicPageTitle>
-
                 <f:heading>
                     <VBox>
                         <Title
                             text="{i18n>title}"
-                            level="H2" />
+                            level="H2"
+                        />
 
                         <Text
                             text="Create Invoices from delivery documents"
-                            class="zbsPageSubtitle" />
+                            class="zbsPageSubtitle"
+                        />
                     </VBox>
                 </f:heading>
 
@@ -39,51 +40,45 @@
                         text="{/schemeSelectedText}"
                         icon="sap-icon://sales-document"
                         state="Information"
-                        visible="{/hasSchemeDetails}" />
+                        visible="{/hasSchemeDetails}"
+                    />
                 </f:snappedContent>
-
             </f:DynamicPageTitle>
         </f:title>
-
 
         <!-- ====================================================== -->
         <!-- RESPONSIVE SELECTION / FILTER AREA                     -->
         <!-- ====================================================== -->
         <f:header>
-            <f:DynamicPageHeader
-                pinnable="true">
-
+            <f:DynamicPageHeader pinnable="true">
                 <VBox class="zbsHeaderContent">
-
                     <HBox
                         alignItems="Center"
                         justifyContent="SpaceBetween"
-                        class="zbsSectionHeader">
-
+                        class="zbsSectionHeader"
+                    >
                         <VBox>
                             <Title
                                 text="Selection Criteria"
-                                level="H4" />
+                                level="H4"
+                            />
 
                             <Text
                                 text="Select delivery document and applicable scheme"
-                                class="zbsSectionDescription" />
+                                class="zbsSectionDescription"
+                            />
                         </VBox>
-
                     </HBox>
-
 
                     <l:Grid
                         defaultSpan="XL4 L4 M6 S12"
                         hSpacing="1"
                         vSpacing="1"
                         width="100%"
-                        class="zbsFilterGrid">
-
-
+                        class="zbsFilterGrid"
+                    >
                         <!-- DELIVERY NUMBER -->
                         <VBox class="zbsField">
-
                             <layoutData>
                                 <l:GridData span="XL4 L4 M6 S12" />
                             </layoutData>
@@ -92,7 +87,8 @@
                                 text="Delivery Number(s)"
                                 labelFor="deliveryInput"
                                 required="true"
-                                class="zbsFieldLabel" />
+                                class="zbsFieldLabel"
+                            />
 
                             <MultiInput
                                 id="deliveryInput"
@@ -101,28 +97,34 @@
                                 showValueHelp="true"
                                 valueHelpRequest=".onDeliveryValueHelpRequest"
                                 submit=".onDeliverySubmit"
-                                tokenUpdate=".onDeliveryTokenUpdate" />
+                                tokenUpdate=".onDeliveryTokenUpdate"
+                            />
 
-                            <HBox wrap="Wrap" alignItems="Center" class="sapUiSmallMarginTop">
-                            <Button text="Fetch Delivery Items"
-                                icon="sap-icon://refresh"
-                                type="Emphasized"
-                                press=".onFetchItems"
-                                enabled="{/hasDeliveryNumbers}"
-                                class="zbsFetchButton sapUiTinyMarginEnd" />
-                            <Button text="Clear"
-                                icon="sap-icon://decline"
-                                type="Transparent"
-                                tooltip="Clear delivery input"
-                                press=".onClearDeliveryInput" />
+                            <HBox
+                                wrap="Wrap"
+                                alignItems="Center"
+                                class="sapUiSmallMarginTop"
+                            >
+                                <Button
+                                    text="Fetch Delivery Items"
+                                    icon="sap-icon://refresh"
+                                    type="Emphasized"
+                                    press=".onFetchItems"
+                                    enabled="{/hasDeliveryNumbers}"
+                                    class="zbsFetchButton sapUiTinyMarginEnd"
+                                />
+                                <Button
+                                    text="Clear"
+                                    icon="sap-icon://decline"
+                                    type="Transparent"
+                                    tooltip="Clear delivery input"
+                                    press=".onClearDeliveryInput"
+                                />
                             </HBox>
-
                         </VBox>
-
 
                         <!-- SCHEME TYPE -->
                         <VBox class="zbsField">
-
                             <layoutData>
                                 <l:GridData span="XL3 L3 M6 S12" />
                             </layoutData>
@@ -130,34 +132,34 @@
                             <Label
                                 text="Scheme Type"
                                 labelFor="schemeTypeSelect"
-                                class="zbsFieldLabel" />
+                                class="zbsFieldLabel"
+                            />
 
                             <Select
                                 id="schemeTypeSelect"
                                 width="100%"
                                 selectedKey="{/schemeType}"
-                                change=".onSchemeTypeChange">
-
+                                change=".onSchemeTypeChange"
+                            >
                                 <core:Item
                                     key="regular"
-                                    text="Regular" />
+                                    text="Regular"
+                                />
 
                                 <core:Item
                                     key="advance"
-                                    text="WSP Advance" />
+                                    text="WSP Advance"
+                                />
 
                                 <core:Item
                                     key="npAdvance"
-                                    text="NP Advance" />
-
+                                    text="NP Advance"
+                                />
                             </Select>
-
                         </VBox>
-
 
                         <!-- SCHEME -->
                         <VBox class="zbsField">
-
                             <layoutData>
                                 <l:GridData span="XL5 L5 M12 S12" />
                             </layoutData>
@@ -165,7 +167,8 @@
                             <Label
                                 text="Scheme"
                                 labelFor="schemeInput"
-                                class="zbsFieldLabel" />
+                                class="zbsFieldLabel"
+                            />
 
                             <Input
                                 id="schemeInput"
@@ -176,12 +179,10 @@
                                 enabled="{= !!${/schemeType} }"
                                 tooltip="{/schemeSelectedText}"
                                 placeholder="Select scheme"
-                                value="{/schemeSelectedText}" />
-
+                                value="{/schemeSelectedText}"
+                            />
                         </VBox>
-
                     </l:Grid>
-
 
                     <!-- SCHEME INFORMATION -->
                     <MessageStrip
@@ -190,22 +191,17 @@
                         showIcon="true"
                         showCloseButton="false"
                         visible="{/hasSchemeDetails}"
-                        class="sapUiSmallMarginTop" />
-
+                        class="sapUiSmallMarginTop"
+                    />
                 </VBox>
-
             </f:DynamicPageHeader>
         </f:header>
-
 
         <!-- ====================================================== -->
         <!-- PAGE CONTENT                                           -->
         <!-- ====================================================== -->
         <f:content>
-
             <VBox class="zbsPageContent">
-
-
                 <!-- ================================================== -->
                 <!-- QUICK SUMMARY                                      -->
                 <!-- ================================================== -->
@@ -213,101 +209,90 @@
                 <FlexBox
                     wrap="Wrap"
                     visible="{/hasSchemeDetails}"
-                    class="zbsSummaryArea">
-
-
+                    class="zbsSummaryArea"
+                >
                     <VBox class="zbsSummaryCard">
-
                         <HBox
                             alignItems="Center"
-                            class="zbsSummaryHeader">
-
+                            class="zbsSummaryHeader"
+                        >
                             <core:Icon
                                 src="sap-icon://sales-document"
                                 size="1rem"
-                                class="sapUiTinyMarginEnd" />
+                                class="sapUiTinyMarginEnd"
+                            />
 
                             <Text text="Scheme" />
-
                         </HBox>
 
                         <Title
                             text="{/schemeSelectedText}"
-                            wrapping="true" />
-
+                            wrapping="true"
+                        />
                     </VBox>
 
-
                     <VBox class="zbsSummaryCard">
-
                         <HBox
                             alignItems="Center"
-                            class="zbsSummaryHeader">
-
+                            class="zbsSummaryHeader"
+                        >
                             <core:Icon
                                 src="sap-icon://money-bills"
                                 size="1rem"
-                                class="sapUiTinyMarginEnd" />
+                                class="sapUiTinyMarginEnd"
+                            />
 
                             <Text text="Billing Total" />
-
                         </HBox>
 
                         <ObjectNumber
                             number="{path: '/billingTotal', formatter: '._formatAmount'}"
                             unit="{/transactionCurrency}"
                             emphasized="true"
-                            state="{= ${/schemeValid} ? 'None' : 'Error' }" />
-
+                            state="{= ${/schemeValid} ? 'None' : 'Error' }"
+                        />
                     </VBox>
 
-
                     <VBox class="zbsSummaryCard">
-
                         <HBox
                             alignItems="Center"
-                            class="zbsSummaryHeader">
-
+                            class="zbsSummaryHeader"
+                        >
                             <core:Icon
                                 src="sap-icon://status-positive"
                                 size="1rem"
-                                class="sapUiTinyMarginEnd" />
+                                class="sapUiTinyMarginEnd"
+                            />
 
                             <Text text="Scheme Status" />
-
                         </HBox>
 
                         <ObjectStatus
                             text="{= !${/billingItems}.length ? 'Fetch delivery items' : (${/schemeValid} ? 'Ready to Post' : 'Validation Required') }"
                             state="{= !${/billingItems}.length ? 'None' : (${/schemeValid} ? 'Success' : 'Error') }"
-                            icon="{= !${/billingItems}.length ? 'sap-icon://pending' : (${/schemeValid} ? 'sap-icon://accept' : 'sap-icon://error') }" />
-
+                            icon="{= !${/billingItems}.length ? 'sap-icon://pending' : (${/schemeValid} ? 'sap-icon://accept' : 'sap-icon://error') }"
+                        />
                     </VBox>
-
                 </FlexBox>
-
 
                 <!-- ================================================== -->
                 <!-- DELIVERY ITEMS CARD                                -->
                 <!-- ================================================== -->
                 <VBox class="zbsCard">
-
-
                     <OverflowToolbar class="zbsCardToolbar">
-
                         <Title
                             text="Delivery Items"
-                            level="H4" />
+                            level="H4"
+                        />
 
                         <ToolbarSpacer />
 
                         <ObjectStatus
                             text="{= ${/items}.length + ' items' }"
                             icon="sap-icon://shipping-status"
-                            state="Information" />
-
+                            state="Information"
+                        />
                     </OverflowToolbar>
-
 
                     <Table
                         id="itemsTable"
@@ -325,218 +310,219 @@
                         autoPopinMode="true"
                         popinLayout="GridSmall"
                         fixedLayout="false"
-                        class="zbsResponsiveTable">
-
-
+                        class="zbsResponsiveTable"
+                    >
                         <columns>
-
                             <Column
                                 width="4rem"
                                 hAlign="Begin"
                                 importance="Low"
                                 minScreenWidth="Desktop"
-                                demandPopin="true">
-
+                                demandPopin="true"
+                            >
                                 <Text text="Sr No." />
-
                             </Column>
-
 
                             <Column
                                 width="8rem"
-                                importance="High">
-
+                                importance="High"
+                            >
                                 <Text text="Delivery No." />
-
                             </Column>
-
 
                             <Column
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="Customer Name" />
-
                             </Column>
-
 
                             <Column
-                                importance="High">
-
-                                <Text text="Product" />
-
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium"
+                            >
+                                <Text text="Incoterm" />
                             </Column>
 
+                            <Column
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium"
+                            >
+                                <Text text="Payment Term" />
+                            </Column>
+
+                            <Column
+                                minScreenWidth="Tablet"
+                                demandPopin="true"
+                                importance="Medium"
+                            >
+                                <Text text="Price Level" />
+                            </Column>
+
+                            <Column importance="High">
+                                <Text text="Product" />
+                            </Column>
 
                             <Column
                                 width="7rem"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="Color" />
-
                             </Column>
-
 
                             <Column
                                 width="6rem"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="Size" />
-
                             </Column>
-
 
                             <Column
                                 width="8rem"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="Brand" />
-
                             </Column>
-
 
                             <Column
                                 width="7rem"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="HSN Code" />
-
                             </Column>
-
 
                             <Column
                                 width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="Bag" />
-
                             </Column>
-
 
                             <Column
                                 width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="Pack" />
-
                             </Column>
-
 
                             <Column
                                 width="9rem"
                                 hAlign="End"
-                                importance="High">
-
+                                importance="High"
+                            >
                                 <Text text="Quantity" />
-
                             </Column>
-
 
                             <Column
                                 width="7rem"
                                 hAlign="End"
-                                importance="High">
-
+                                importance="High"
+                            >
                                 <Text text="Rate" />
-
                             </Column>
-
                         </columns>
 
-
                         <items>
-
                             <ColumnListItem
                                 type="Inactive"
-                                vAlign="Middle">
-
+                                vAlign="Middle"
+                            >
                                 <cells>
-
-                                    <Text
-                                        text="{srNo}" />
+                                    <Text text="{srNo}" />
 
                                     <ObjectIdentifier
-                                        title="{deliveryNumber}" />
+                                        title="{deliveryNumber}"
+                                    />
 
                                     <Text
                                         text="{customerName}"
-                                        wrapping="true" />
-
-                                    <ObjectIdentifier
-                                        title="{product}" />
+                                        wrapping="true"
+                                    />
+                                    <Text
+                                        text="{Incoterm}"
+                                        wrapping="true"
+                                    />
 
                                     <Text
-                                        text="{color}" />
+                                        text="{paymentterm}"
+                                        wrapping="true"
+                                    />
 
                                     <Text
-                                        text="{size}" />
+                                        text="{PriceLevel}"
+                                        wrapping="true"
+                                    />
+
+                                    <ObjectIdentifier title="{product}" />
+
+                                    <Text text="{color}" />
+
+                                    <Text text="{size}" />
 
                                     <Text
                                         text="{brand}"
-                                        wrapping="true" />
+                                        wrapping="true"
+                                    />
+
+                                    <Text text="{hsnCode}" />
+
+                                    <ObjectNumber
+                                        number="{parts: [{path: 'unit'}, {path: 'qty'}, {path: 'bag'}], formatter: '._formatBag'}"
+                                    />
+
+                                    <ObjectNumber
+                                        number="{path: 'pack', formatter: '._formatAmount'}"
+                                    />
 
                                     <Text
-                                        text="{hsnCode}" />
-
-                                    <ObjectNumber
-                                        number="{parts: [{path: 'unit'}, {path: 'qty'}, {path: 'bag'}], formatter: '._formatBag'}" />
-
-                                    <ObjectNumber
-                                        number="{path: 'pack', formatter: '._formatAmount'}" />
-
-                                    <Text text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}" />
+                                        text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'rate', formatter: '._formatAmount'}"
-                                        unit="{transactionCurrency}" />
-
+                                        unit="{transactionCurrency}"
+                                    />
                                 </cells>
-
                             </ColumnListItem>
-
                         </items>
-
                     </Table>
-
                 </VBox>
-
 
                 <!-- ================================================== -->
                 <!-- BILLING DETAILS CARD                               -->
                 <!-- ================================================== -->
                 <VBox class="zbsCard">
-
-
                     <OverflowToolbar class="zbsCardToolbar">
-
                         <Title
                             text="Billing Details"
-                            level="H4" />
+                            level="H4"
+                        />
 
                         <ToolbarSpacer />
 
                         <ObjectStatus
                             text="{= !${/billingItems}.length ? 'Awaiting items and scheme' : (${/schemeValid} ? 'Calculated' : 'Check Calculation') }"
                             state="{= !${/billingItems}.length ? 'None' : (${/schemeValid} ? 'Success' : 'Error') }"
-                            icon="{= !${/billingItems}.length ? 'sap-icon://pending' : (${/schemeValid} ? 'sap-icon://sys-enter-2' : 'sap-icon://message-error') }" />
-
+                            icon="{= !${/billingItems}.length ? 'sap-icon://pending' : (${/schemeValid} ? 'sap-icon://sys-enter-2' : 'sap-icon://message-error') }"
+                        />
                     </OverflowToolbar>
-
 
                     <!-- VALIDATION ERROR -->
                     <MessageStrip
@@ -545,8 +531,8 @@
                         showIcon="true"
                         showCloseButton="false"
                         visible="{= !${/schemeValid} }"
-                        class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiSmallMarginBottom" />
-
+                        class="sapUiSmallMarginBegin sapUiSmallMarginEnd sapUiSmallMarginBottom"
+                    />
 
                     <Table
                         id="billingTable"
@@ -559,235 +545,206 @@
                         autoPopinMode="true"
                         popinLayout="GridSmall"
                         fixedLayout="false"
-                        class="zbsResponsiveTable zbsBillingTable">
-
-
+                        class="zbsResponsiveTable zbsBillingTable"
+                    >
                         <columns>
-
-
                             <Column
                                 width="3rem"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="Sr No." />
-
                             </Column>
-
 
                             <Column
                                 width="5rem"
                                 hAlign="End"
-                                importance="High">
-
+                                importance="High"
+                            >
                                 <Text text="Quantity" />
-
                             </Column>
-
 
                             <Column
                                 width="6rem"
                                 hAlign="End"
-                                importance="High">
-
+                                importance="High"
+                            >
                                 <Text text="Rate" />
-
                             </Column>
-
 
                             <Column
                                 width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="Dis. 1 %" />
-
                             </Column>
-
 
                             <Column
                                 width="8rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="Rate After Dis A" />
-
                             </Column>
-
 
                             <Column
                                 width="9rem"
                                 hAlign="End"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="Value After Dis A" />
-
                             </Column>
-
 
                             <Column
                                 width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
-                                <Text text="{= (${/schemeType} === 'advance' || ${/schemeType} === 'npAdvance') ? 'Dis 2 (' + ${/transactionCurrency} + ')' : 'Dis 2 (%)' }" />
-
+                                importance="Medium"
+                            >
+                                <Text
+                                    text="{= (${/schemeType} === 'advance' || ${/schemeType} === 'npAdvance') ? 'Dis 2 (' + ${/transactionCurrency} + ')' : 'Dis 2 (%)' }"
+                                />
                             </Column>
-
 
                             <Column
                                 width="9rem"
                                 hAlign="End"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
-                                importance="Low">
-
+                                importance="Low"
+                            >
                                 <Text text="Value After Dis B" />
-
                             </Column>
-
 
                             <Column
                                 width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="GST %" />
-
                             </Column>
-
 
                             <Column
                                 width="7rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
-                                importance="Medium">
-
+                                importance="Medium"
+                            >
                                 <Text text="GST Value" />
-
                             </Column>
-
 
                             <Column
                                 width="7rem"
                                 hAlign="End"
-                                importance="High">
-
+                                importance="High"
+                            >
                                 <Text text="Total" />
-
                             </Column>
-
                         </columns>
 
-
                         <items>
-
-                            <ColumnListItem
-                                vAlign="Middle">
-
+                            <ColumnListItem vAlign="Middle">
                                 <cells>
-
                                     <Text text="{srNo}" />
 
-                                    <Text text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}" />
+                                    <Text
+                                        text="{parts: [{path: 'quantityinbaseunit'}, {path: 'actualUom'}], formatter: '._formatQuantity'}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'rate', formatter: '._formatAmount'}"
-                                        unit="{transactionCurrency}" />
+                                        unit="{transactionCurrency}"
+                                    />
 
                                     <Text
-                                        text="{path: 'discount1', formatter: '._formatPercent'}" />
+                                        text="{path: 'discount1', formatter: '._formatPercent'}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'rateAfterDisA', formatter: '._formatAmount'}"
-                                        unit="{transactionCurrency}" />
+                                        unit="{transactionCurrency}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'valueAfterDisA', formatter: '._formatAmount'}"
-                                        unit="{transactionCurrency}" />
+                                        unit="{transactionCurrency}"
+                                    />
 
                                     <Text
-                                        text="{parts: [{path: 'discount2'}, {path: '/schemeType'}], formatter: '._formatDiscount2'}" />
+                                        text="{parts: [{path: 'discount2'}, {path: '/schemeType'}], formatter: '._formatDiscount2'}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'valueAfterDisB', formatter: '._formatAmount'}"
-                                        unit="{transactionCurrency}" />
+                                        unit="{transactionCurrency}"
+                                    />
 
                                     <Text
-                                        text="{path: 'gstPercent', formatter: '._formatPercent'}" />
+                                        text="{path: 'gstPercent', formatter: '._formatPercent'}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'gstValue', formatter: '._formatAmount'}"
-                                        unit="{transactionCurrency}" />
+                                        unit="{transactionCurrency}"
+                                    />
 
                                     <ObjectNumber
                                         number="{path: 'total', formatter: '._formatAmount'}"
                                         unit="{transactionCurrency}"
-                                        emphasized="true" />
-
+                                        emphasized="true"
+                                    />
                                 </cells>
-
                             </ColumnListItem>
-
                         </items>
-
                     </Table>
-
                 </VBox>
-
             </VBox>
-
         </f:content>
-
 
         <!-- ====================================================== -->
         <!-- RESPONSIVE STICKY FOOTER                              -->
         <!-- ====================================================== -->
         <f:footer>
-
             <OverflowToolbar class="zbsFooter">
-
-
-
-
                 <VBox
                     alignItems="Start"
-                    class="zbsFooterTotal">
-
+                    class="zbsFooterTotal"
+                >
                     <Text
                         text="Billing Total"
-                        class="zbsFooterLabel" />
+                        class="zbsFooterLabel"
+                    />
 
                     <ObjectNumber
                         number="{path: '/billingTotal', formatter: '._formatAmount'}"
                         unit="{/transactionCurrency}"
                         emphasized="true"
-                        state="{= ${/schemeValid} ? 'None' : 'Error' }" />
-
+                        state="{= ${/schemeValid} ? 'None' : 'Error' }"
+                    />
                 </VBox>
-
 
                 <ToolbarSpacer />
 
-                <Button text="Clear"
+                <Button
+                    text="Clear"
                     icon="sap-icon://delete"
                     type="Transparent"
                     press=".onClearAll"
                     visible="{= !${/postingComplete} }"
-                    enabled="{= ${/hasDeliveryNumbers} || !!${/schemeType} || ${/items}.length > 0 }" />
-
+                    enabled="{= ${/hasDeliveryNumbers} || !!${/schemeType} || ${/items}.length > 0 }"
+                />
 
                 <Button
                     text="Post Scheme"
@@ -796,18 +753,27 @@
                     press=".onPostScheme"
                     visible="{= !${/postingComplete} }"
                     enabled="{= ${/billingItems}.length > 0 &amp;&amp; ${/schemeValid} &amp;&amp; !${/posting} &amp;&amp; !${/postingComplete} }"
-                    class="zbsPostButton" />
+                    class="zbsPostButton"
+                />
 
-                <Button text="New"
+                <Button
+                    text="Clear Customer Account"
+                    icon="sap-icon://account"
+                    type="Emphasized"
+                    visible="{/clearingAvailable}"
+                    enabled="{= !${/clearing} &amp;&amp; !${/clearingComplete} }"
+                    press=".onClearCustomerAccount"
+                />
+
+                <Button
+                    text="New"
                     icon="sap-icon://add"
                     type="Emphasized"
                     visible="{/postingComplete}"
-                    press=".onNewBilling" />
-
+                    enabled="{= !${/clearing} }"
+                    press=".onNewBilling"
+                />
             </OverflowToolbar>
-
         </f:footer>
-
     </f:DynamicPage>
-
 </mvc:View>
