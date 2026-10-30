@@ -71,17 +71,17 @@ test('missing PBD blocks clearing and network failures leave action available', 
     assert.equal(state['/clearing'], false);
     assert.equal(state['/clearingAvailable'], true);
 });
-test('clearing posts the exact payload to custom HTTP endpoint with CSRF token', async () => {
+test('clearing sends only POST with the exact payload to custom HTTP endpoint', async () => {
     const calls = [];
     const {controller} = setup({}, {fetch: async (url, options) => {
         calls.push({url, options});
         return {ok: true, headers: {get: () => 'token'}, json: async () => ({Status: 'S'})};
     }});
     await controller._postCustomerClearing(payload);
-    assert.equal(calls[1].url, '/sap/bc/http/sap/zhttp_schemeclearing');
-    assert.equal(calls[1].options.method, 'POST');
-    assert.equal(calls[1].options.headers['X-CSRF-Token'], 'token');
-    assert.deepEqual(JSON.parse(calls[1].options.body), payload);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, '/sap/bc/http/sap/zhttp_schemeclearing');
+    assert.equal(calls[0].options.method, 'POST');
+    assert.deepEqual(JSON.parse(calls[0].options.body), payload);
 });
 
 

@@ -2612,16 +2612,7 @@ sap.ui.define([
         async _postCustomerClearing(oPayload) {
             // The existing /sap proxy routes this path to the configured S/4 host.
             var sUrl = "/sap/bc/http/sap/zhttp_schemeclearing";
-            var oTokenResponse = await fetch(sUrl, {
-                method: "GET",
-                headers: { "X-CSRF-Token": "Fetch", "Accept": "application/json" }
-            });
-            if (!oTokenResponse.ok) {
-                throw new Error(this._extractErrorMessage(await oTokenResponse.text()) || ("HTTP " + oTokenResponse.status));
-            }
             var mHeaders = { "Content-Type": "application/json", "Accept": "application/json" };
-            var sToken = oTokenResponse.headers.get("X-CSRF-Token");
-            if (sToken) { mHeaders["X-CSRF-Token"] = sToken; }
             var oResponse = await fetch(sUrl, {
                 method: "POST",
                 headers: mHeaders,
