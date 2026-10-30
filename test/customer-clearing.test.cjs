@@ -83,3 +83,17 @@ test('clearing posts the exact payload to custom HTTP endpoint with CSRF token',
     assert.equal(calls[1].options.headers['X-CSRF-Token'], 'token');
     assert.deepEqual(JSON.parse(calls[1].options.body), payload);
 });
+
+
+test('PROCESSING with JOB_SCHEDULED current step exposes both clearing actions', () => {
+    for (const type of ['advance', 'npAdvance']) {
+        const {controller, state, messages} = setup({'/schemeType': type, '/billingTotal': 35935,
+            '/schemeDetails': {SelectedSchemes: [{AccountingDocument: '2200000145', AdvAmount: 20000}]}});
+        controller._showSchemeBillingResult({ProcessStatus: 'PROCESSING', CurrentStep: 'JOB_SCHEDULED',
+            PreliminaryBillingDocument: 'PBD0000068', CreatePBDStatus: 'SUCCESS',
+            Discount1Status: 'SKIPPED', Discount2Status: 'SKIPPED'});
+        assert.equal(state['/clearingAvailable'], true);
+        assert.equal(state['/clearingPayload'].BillingDocument, 'PBD0000068');
+        assert.ok(messages[0].options.actions.includes('Clear Customer Account'));
+    }
+});

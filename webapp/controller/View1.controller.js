@@ -2538,7 +2538,9 @@ sap.ui.define([
             } else if (["SUCCESS", "PROCESSING", "JOB_SCHEDULED", "SKIPPED"].includes(sStatus)) {
                 this.getView().getModel().setProperty("/postingComplete", true);
                 var oModel = this.getView().getModel();
-                var bCanClear = sStatus === "JOB_SCHEDULED" &&
+                var bJobScheduled = sStatus === "JOB_SCHEDULED" ||
+                    String(oResult.CurrentStep || "").trim().toUpperCase() === "JOB_SCHEDULED";
+                var bCanClear = bJobScheduled &&
                     ["advance", "npAdvance"].includes(oModel.getProperty("/schemeType"));
                 if (bCanClear) {
                     oModel.setProperty("/clearingPayload", this._buildCustomerClearingPayload(oResult));
