@@ -19,9 +19,9 @@ sap.ui.define([
     "sap/m/Table"
 ], (Controller, Fragment, BusyIndicator, 
     JSONModel, Filter, FilterOperator, Token,
-     MessageToast, MessageBox, GroupHeaderListItem,
-      TableColumn, Label, Text, MobileColumn, ColumnListItem,
-       MobileTable) => {
+    MessageToast, MessageBox, GroupHeaderListItem,
+    TableColumn, Label, Text, MobileColumn, ColumnListItem,
+    MobileTable) => {
     "use strict";
     return Controller.extend("com.zeel.billingscheme.billingscheme.controller.View1", {
         onInit() {
@@ -29,35 +29,22 @@ sap.ui.define([
             this.getView().setModel(new JSONModel({
 
                 items: [],
-
                 postingComplete: false,
                 clearingAvailable: false,
                 clearing: false,
                 clearingComplete: false,
                 clearingPayload: null,
-
                 posting: false,
-
                 transactionCurrency: "",
-
                 itemCount: 0,
-
                 deliveryCount: 0,
-
                 hasDeliveryNumbers: false,
-
                 schemeDetails: null,
-
                 schemeType: "regular",
-
                 schemeSelectedText: "",
-
                 schemeSummaryText: "",
-
                 hasSchemeDetails: false,
-
                 billingItems: [],
-
                 billingTotal: 0,
                 billingTotalBeforeRoundOff: 0,
                 taxableTotal: 0,
@@ -69,27 +56,16 @@ sap.ui.define([
                 customerPendingAmount: 0,
                 fifoGrossOpening: 0,
                 fifoGrossRemaining: 0,
-
                 schemeValid: true,
-
                 schemeErrorText: ""
-
             }));
 
-
-
             this._mDeliveryGroupInfo = {};
-
             this._sDeliveryValueHelpAnchorFullName = null;
-
-
-
             this._attachDeliveryPasteHandler();
-
         },
 
         _attachDeliveryPasteHandler() {
-
             var oInput = this.byId("deliveryInput");
             if (!oInput) {
                 return;
@@ -101,12 +77,9 @@ sap.ui.define([
 
                     var oDomRef = oInput.getFocusDomRef();
                     if (oDomRef) {
-
                         oDomRef.removeEventListener("paste", this._fnDeliveryPasteHandler, true);
                         oDomRef.addEventListener("paste", this._fnDeliveryPasteHandler, true);
-
                     }
-
                 }.bind(this)
             }, this);
         },
@@ -116,9 +89,7 @@ sap.ui.define([
             var sText = oClipboardData ? oClipboardData.getData("text") : "";
             var aValues = this._splitDeliveryNumbers(sText);
             if (!aValues.length) {
-
                 return;
-
             }
 
             oNativeEvent.preventDefault();
@@ -130,20 +101,14 @@ sap.ui.define([
 
             if (iAdded) {
                 MessageToast.show(iAdded + " delivery number(s) added from paste.");
-
             }
-
         },
-
-
 
         // ---------------------------------------------------------------
 
         // Delivery number entry (typed)
 
         // ---------------------------------------------------------------
-
-
 
         onDeliverySubmit(oEvent) {
             var sValue = oEvent.getParameter("value") || "";
@@ -175,85 +140,46 @@ sap.ui.define([
         onClearAll() {
             MessageBox.warning("Clear all delivery numbers, selected schemes, and billing details? This will discard the current entries.", {
                 title: "Clear billing details?",
-
                 actions: ["Clear", MessageBox.Action.CANCEL],
-
                 emphasizedAction: MessageBox.Action.CANCEL,
-
                 initialFocus: MessageBox.Action.CANCEL,
 
                 onClose: function (sAction) {
-
                     if (sAction === "Clear") {
-
                         this._clearAll();
-
                     }
-
                 }.bind(this)
-
             });
-
         },
-
-
-
         onNewBilling() {
-
             this._clearAll();
-
         },
-
-
 
         _clearAll() {
-
             var oInput = this.byId("deliveryInput");
-
-
-
             if (oInput) {
-
                 oInput.removeAllTokens();
-
                 oInput.setValue("");
-
             }
 
-
-
             var oModel = this.getView().getModel();
-
-
-
             oModel.setProperty("/postingComplete", false);
             oModel.setProperty("/clearingAvailable", false);
             oModel.setProperty("/clearing", false);
             oModel.setProperty("/clearingComplete", false);
             oModel.setProperty("/clearingPayload", null);
-
             oModel.setProperty("/items", []);
-
             oModel.setProperty("/transactionCurrency", "");
-
             oModel.setProperty("/itemCount", 0);
-
             oModel.setProperty("/deliveryCount", 0);
-
             oModel.setProperty("/schemeDetails", null);
-
             oModel.setProperty("/schemeType", "regular");
 
             this._mDeliveryGroupInfo = {};
-
             oModel.setProperty("/schemeSelectedText", "");
-
             oModel.setProperty("/schemeSummaryText", "");
-
             oModel.setProperty("/hasSchemeDetails", false);
-
             oModel.setProperty("/billingItems", []);
-
             oModel.setProperty("/billingTotal", 0);
             oModel.setProperty("/billingTotalBeforeRoundOff", 0);
             oModel.setProperty("/taxableTotal", 0);
@@ -265,122 +191,64 @@ sap.ui.define([
             oModel.setProperty("/customerPendingAmount", 0);
             oModel.setProperty("/fifoGrossOpening", 0);
             oModel.setProperty("/fifoGrossRemaining", 0);
-
             oModel.setProperty("/schemeValid", true);
-
             oModel.setProperty("/schemeErrorText", "");
 
-
-
             this._syncDeliveryState();
-
             MessageToast.show("Cleared.");
-
         },
 
-
-
         _splitDeliveryNumbers(sRaw) {
-
             return String(sRaw || "")
-
                 .split(/[,;\n\r\t ]+/)
-
                 .map(function (sValue) {
-
                     return sValue.trim().toUpperCase();
-
                 })
 
                 .filter(function (sValue) {
-
                     return !!sValue;
-
                 });
-
         },
 
-
-
         _addDeliveryNumbers(aValues) {
-
             var oInput = this.byId("deliveryInput");
 
-
-
             if (!oInput) {
-
                 return 0;
-
             }
-
-
 
             var mExisting = {};
 
-
-
             oInput.getTokens().forEach(function (oToken) {
-
                 mExisting[oToken.getKey()] = true;
-
             });
-
-
 
             var iAdded = 0;
 
-
-
             (aValues || []).forEach(function (sValue) {
-
                 if (!sValue || mExisting[sValue]) {
-
-                    return;
-
+                return;
                 }
 
-
-
                 mExisting[sValue] = true;
-
                 iAdded++;
 
-
-
                 oInput.addToken(new Token({
-
                     key: sValue,
-
                     text: sValue
-
                 }));
-
             });
 
-
-
             return iAdded;
-
         },
 
-
-
         _syncDeliveryState() {
-
             var oInput = this.byId("deliveryInput");
-
             var oModel = this.getView().getModel();
 
-
-
             if (!oInput || !oModel) {
-
                 return;
-
             }
-
-
 
             var sDeliverySelection = JSON.stringify(oInput.getTokens().map(function (oToken) {
                 return oToken.getKey();
@@ -393,42 +261,25 @@ sap.ui.define([
 
         },
 
-
-
         // ---------------------------------------------------------------
-
         // Delivery number F4 value help
-
         // ---------------------------------------------------------------
-
-
 
         _configureValueHelpTable(oDialog, oTable, sModel, sPath, aFields) {
-
             oTable.setModel(oDialog.getModel(sModel), sModel);
-
             // ValueHelpDialog also reads row contexts through the default model.
-
             oTable.setModel(oDialog.getModel(sModel));
 
             if (!oTable.data("selectionRestoreAttached")) {
-
                 oTable.data("selectionRestoreAttached", true);
-
                 oDialog.attachUpdateSelection(function (oEvent) {
-
                     this._restoreValueHelpSelection(oDialog, oTable, oEvent.getParameter("tokenKeys"));
-
                 }, this);
 
                 if (oTable.attachRowsUpdated) {
-
                     oTable.attachRowsUpdated(function () { oDialog.update(); });
-
                 } else {
-
                     oTable.attachUpdateFinished(function () { oDialog.update(); });
-
                 }
 
             }
@@ -436,25 +287,16 @@ sap.ui.define([
             oTable.destroyColumns();
 
             var fnCell = function (aField) {
-
                 return new Text({ text: { path: aField[0],
-
                     formatter: aField[3] ? aField[3].bind(this) : undefined } });
-
             }.bind(this);
 
             aFields.forEach(function (aField) {
-
                 if (oTable.bindRows) {
-
                     oTable.addColumn(new TableColumn({ label: new Label({ text: aField[1] }),
-
                         template: fnCell(aField), width: aField[2], sortProperty: aField[0] }));
-
                 } else {
-
                     oTable.addColumn(new MobileColumn({ header: new Label({ text: aField[1] }), width: aField[2] }));
-
                 }
 
             });
