@@ -12,7 +12,7 @@
         id="page"
         fitContent="true"
         headerExpanded="true"
-        toggleHeaderOnTitleClick="false"
+        toggleHeaderOnTitleClick="true"
         showFooter="true"
         class="zbsDynamicPage"
     >
@@ -278,6 +278,30 @@
                 <!-- ================================================== -->
                 <!-- DELIVERY ITEMS CARD                                -->
                 <!-- ================================================== -->
+                <VBox class="zbsCard sapUiSmallMarginBottom" visible="{= ${/items}.length > 0 }">
+                    <OverflowToolbar class="zbsCardToolbar">
+                        <Title text="Customer Details" level="H4" />
+                    </OverflowToolbar>
+                    <l:Grid defaultSpan="XL3 L3 M6 S12" class="sapUiSmallMarginTop sapUiSmallMarginBottom">
+                        <VBox class="zbsField">
+                            <Label text="Customer Name" class="zbsFieldLabel" />
+                            <Text text="{parts: [{path: '/items'}, {value: 'customerName'}], formatter: '._formatDeliveryHeaderValues'}" wrapping="true" />
+                        </VBox>
+                        <VBox class="zbsField">
+                            <Label text="Incoterm" class="zbsFieldLabel" />
+                            <Text text="{parts: [{path: '/items'}, {value: 'Incoterm'}], formatter: '._formatDeliveryHeaderValues'}" wrapping="true" />
+                        </VBox>
+                        <VBox class="zbsField">
+                            <Label text="Payment Term" class="zbsFieldLabel" />
+                            <Text text="{parts: [{path: '/items'}, {value: 'paymentterm'}], formatter: '._formatDeliveryHeaderValues'}" wrapping="true" />
+                        </VBox>
+                        <VBox class="zbsField">
+                            <Label text="Price Level" class="zbsFieldLabel" />
+                            <Text text="{parts: [{path: '/items'}, {value: 'PriceLevel'}], formatter: '._formatDeliveryHeaderValues'}" wrapping="true" />
+                        </VBox>
+                    </l:Grid>
+                </VBox>
+
                 <VBox class="zbsCard">
                     <OverflowToolbar class="zbsCardToolbar">
                         <Title
@@ -314,7 +338,6 @@
                     >
                         <columns>
                             <Column
-                                width="4rem"
                                 hAlign="Begin"
                                 importance="Low"
                                 minScreenWidth="Desktop"
@@ -324,42 +347,9 @@
                             </Column>
 
                             <Column
-                                width="8rem"
                                 importance="High"
                             >
                                 <Text text="Delivery No." />
-                            </Column>
-
-                            <Column
-                                minScreenWidth="Tablet"
-                                demandPopin="true"
-                                importance="Medium"
-                            >
-                                <Text text="Customer Name" />
-                            </Column>
-
-                            <Column
-                                minScreenWidth="Tablet"
-                                demandPopin="true"
-                                importance="Medium"
-                            >
-                                <Text text="Incoterm" />
-                            </Column>
-
-                            <Column
-                                minScreenWidth="Tablet"
-                                demandPopin="true"
-                                importance="Medium"
-                            >
-                                <Text text="Payment Term" />
-                            </Column>
-
-                            <Column
-                                minScreenWidth="Tablet"
-                                demandPopin="true"
-                                importance="Medium"
-                            >
-                                <Text text="Price Level" />
                             </Column>
 
                             <Column importance="High">
@@ -367,7 +357,6 @@
                             </Column>
 
                             <Column
-                                width="7rem"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
                                 importance="Medium"
@@ -376,7 +365,6 @@
                             </Column>
 
                             <Column
-                                width="6rem"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
                                 importance="Medium"
@@ -385,7 +373,6 @@
                             </Column>
 
                             <Column
-                                width="8rem"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
                                 importance="Low"
@@ -394,7 +381,6 @@
                             </Column>
 
                             <Column
-                                width="7rem"
                                 minScreenWidth="Desktop"
                                 demandPopin="true"
                                 importance="Low"
@@ -403,7 +389,6 @@
                             </Column>
 
                             <Column
-                                width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
@@ -413,7 +398,6 @@
                             </Column>
 
                             <Column
-                                width="5rem"
                                 hAlign="End"
                                 minScreenWidth="Tablet"
                                 demandPopin="true"
@@ -423,7 +407,6 @@
                             </Column>
 
                             <Column
-                                width="9rem"
                                 hAlign="End"
                                 importance="High"
                             >
@@ -431,7 +414,6 @@
                             </Column>
 
                             <Column
-                                width="7rem"
                                 hAlign="End"
                                 importance="High"
                             >
@@ -449,25 +431,6 @@
 
                                     <ObjectIdentifier
                                         title="{deliveryNumber}"
-                                    />
-
-                                    <Text
-                                        text="{customerName}"
-                                        wrapping="true"
-                                    />
-                                    <Text
-                                        text="{Incoterm}"
-                                        wrapping="true"
-                                    />
-
-                                    <Text
-                                        text="{paymentterm}"
-                                        wrapping="true"
-                                    />
-
-                                    <Text
-                                        text="{PriceLevel}"
-                                        wrapping="true"
                                     />
 
                                     <ObjectIdentifier title="{product}" />

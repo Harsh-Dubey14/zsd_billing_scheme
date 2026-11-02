@@ -675,6 +675,12 @@ sap.ui.define([
 
                     }
 
+                    if (new Set(aRows.map(function (oRow) { return String(oRow.PriceLevel ?? "").trim(); })).size > 1) {
+                        MessageBox.error("Please select delivery numbers with the same price level only.");
+                        return;
+                    }
+
+
                 }
 
                 this.byId("deliveryInput").removeAllTokens();
@@ -1093,6 +1099,13 @@ sap.ui.define([
             }
         },
 
+        _formatDeliveryHeaderValues(aItems, sField) {
+            var aValues = Array.from(new Set((aItems || []).map(function (oItem) {
+                return String(oItem[sField] ?? "").trim();
+            }).filter(Boolean)));
+            return aValues.join(", ") || "?";
+        },
+
         _getDeliveryValidationError(aItems) {
 
             var aPgiPending = [];
@@ -1116,6 +1129,14 @@ sap.ui.define([
             });
 
             var aErrors = [];
+            var aRows = aItems || [];
+            if (new Set(aRows.map(function (oItem) { return String(oItem.customerId ?? "").trim(); })).size > 1) {
+                aErrors.push("Please select delivery numbers for a single customer only.");
+            }
+            if (new Set(aRows.map(function (oItem) { return String(oItem.PriceLevel ?? "").trim(); })).size > 1) {
+                aErrors.push("Please select delivery numbers with the same price level only.");
+            }
+
 
             if (aPgiPending.length) {
 
@@ -1435,7 +1456,7 @@ sap.ui.define([
                         this._getSelectedCustomerId() !== sCustomerId) {
                         return;
                     }
-                    this._applySelectedSchemes(this._getWspAutoSelectedSchemes(aSchemes));
+                    this._applySelectedSchemes(aSchemes);
                     if (!aSchemes.length) {
                         MessageToast.show("No WSP Advance schemes found for this customer.");
                     }
@@ -1561,7 +1582,7 @@ sap.ui.define([
 
                         // eslint-disable-next-line no-nested-ternary
                         var aSelected = oDetails ? (oDetails.SelectedSchemes || [oDetails]) :
-                            (sSchemeType === "advance" ? this._getWspAutoSelectedSchemes(aSchemes) : []);
+                            (sSchemeType === "advance" ? aSchemes : []);
 
                         var aKeys = aSelected.map(this._getSchemeValueHelpKey.bind(this));
 
@@ -1697,24 +1718,23 @@ sap.ui.define([
 
 
 
-            var fnReadPage = async function (sPageUrl) {
-                var oResponse = await fetch(sPageUrl, {
-                    headers: { "Accept": "application/json" }
-                });
-                if (!oResponse.ok) {
-                    throw new Error("HTTP " + oResponse.status);
-                }
-                var oData = await oResponse.json();
-                var aRows = (oData && oData.value) || [];
-                if (oData && oData["@odata.nextLink"]) {
-                    var sNextUrl = new URL(oData["@odata.nextLink"],
-                        new URL(sPageUrl, document.baseURI)).href;
-                    aRows = aRows.concat(await fnReadPage(sNextUrl));
-                }
-                return aRows;
-            };
+            return fetch(sUrl, {
 
-            return fnReadPage(sUrl).then(function (aRows) {
+                headers: { "Accept": "application/json" }
+
+            }).then(function (oResponse) {
+
+                if (!oResponse.ok) {
+
+                    throw new Error("HTTP " + oResponse.status);
+
+                }
+
+                return oResponse.json();
+
+            }).then(function (oData) {
+
+                var aRows = (oData && oData.value) || [];
 
                 var mSeen = {};
 
@@ -1724,7 +1744,7 @@ sap.ui.define([
 
                 aRows.forEach(function (oRow) {
 
-                    var sDedupeKey = [oRow.AccountingDocument, oRow.AccountingDocumentItem, oRow.Customer, oRow.scheme_type].join("|");
+                    var sDedupeKey = [oRow.AccountingDocument, oRow.AccountingDocumentItem, oRow.Customer].join("|");
 
 
 
@@ -1896,32 +1916,6 @@ sap.ui.define([
             oDialog.close();
 
             this._applySelectedSchemes(aSchemes);
-        },
-
-        _getWspAutoSelectedSchemes(aSchemes) {
-            var aItems = this.getView().getModel().getProperty("/items") || [];
-            if (!aSchemes.length || !aItems.length) {
-                return [];
-            }
-
-            var aOrdered = this._combineAdvanceSchemes(aSchemes, "advance").SelectedSchemes;
-            var aSelected = [];
-            for (var i = 0; i < aOrdered.length; i++) {
-                aSelected.push(aOrdered[i]);
-                // Each added scheme can change the highest Discount 1.
-                // Calculate carry forward using only the selected prefix.
-                var oCombined = this._combineAdvanceSchemes(aSelected, "advance");
-                var fDiscount1 = this._parsePercent(oCombined.Discount1);
-                var fNetValue = aItems.reduce(function (fTotal, oItem) {
-                    return fTotal + (Number(oItem.rate) || 0) *
-                        (1 - fDiscount1) * (Number(oItem.quantityinbaseunit) || 0);
-                }, 0);
-                var oCalculation = this._calculateAdvanceDiscount2(aSelected, fNetValue, aItems[0].gstRate);
-                if (oCalculation.TotalAdvanceRemaining > 0) {
-                    break;
-                }
-            }
-            return aSelected;
         },
 
         _applySelectedSchemes(aSchemes) {
@@ -2589,6 +2583,7 @@ sap.ui.define([
                 return;
             }
             oModel.setProperty("/clearing", true);
+            BusyIndicator.show(0);
             try {
                 var oResult = await this._postCustomerClearing(oPayload);
                 var sStatus = String(oResult.Status || "").trim().toUpperCase();
@@ -2605,6 +2600,7 @@ sap.ui.define([
             } catch (oError) {
                 MessageBox.error("Could not clear customer account: " + oError.message);
             } finally {
+                BusyIndicator.hide();
                 oModel.setProperty("/clearing", false);
             }
         },

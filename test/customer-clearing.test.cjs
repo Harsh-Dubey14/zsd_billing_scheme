@@ -5,18 +5,20 @@ const {test} = require('node:test');
 function setup(state = {}, environment = {}) {
     let controller;
     const messages = [];
+    const busy = [];
+    const busyIndicator = {show: delay => busy.push(["show", delay]), hide: () => busy.push(["hide"])};
     const box = Object.fromEntries(['success', 'warning', 'error'].map(kind => [kind,
         (message, options) => messages.push({kind, message, options})]));
     vm.runInNewContext(fs.readFileSync('webapp/controller/View1.controller.js', 'utf8'), {
         ...environment,
         sap: {ui: {define(deps, factory) {
-            controller = factory({extend: (name, methods) => methods}, null, null, null, null, null, null, null, box);
+            controller = factory({extend: (name, methods) => methods}, null, busyIndicator, null, null, null, null, null, box);
         }}}
     });
     controller.getView = () => ({getModel: () => ({getProperty: key => state[key],
         setProperty: (key, value) => {state[key] = value;}})});
     controller._getSelectedCustomerId = () => '50001532';
-    return {controller, messages, state};
+    return {controller, messages, state, busy};
 }
 const payload = {BillingDocument: '0090000401', Customer: '50001532', InvoiceAmount: 35935,
     Advances: [{Document: '2200000145', Amount: 20000}]};
@@ -95,5 +97,29 @@ test('PROCESSING with JOB_SCHEDULED current step exposes both clearing actions',
         assert.equal(state['/clearingAvailable'], true);
         assert.equal(state['/clearingPayload'].BillingDocument, 'PBD0000068');
         assert.ok(messages[0].options.actions.includes('Clear Customer Account'));
+    }
+});
+
+
+test('clearing shows an immediate loader until the request settles and ignores duplicate clicks', async () => {
+    for (const fails of [false, true]) {
+        const {controller, state, busy} = setup({'/clearingAvailable': true, '/clearingPayload': payload});
+        let settle;
+        let calls = 0;
+        controller._postCustomerClearing = () => {
+            calls++;
+            return new Promise((resolve, reject) => {
+                settle = () => fails ? reject(Error('Unavailable')) : resolve({Status: 'S'});
+            });
+        };
+        const pending = controller.onClearCustomerAccount();
+        assert.deepEqual(busy, [['show', 0]]);
+        assert.equal(state['/clearing'], true);
+        await controller.onClearCustomerAccount();
+        assert.equal(calls, 1);
+        settle();
+        await pending;
+        assert.deepEqual(busy, [['show', 0], ['hide']]);
+        assert.equal(state['/clearing'], false);
     }
 });

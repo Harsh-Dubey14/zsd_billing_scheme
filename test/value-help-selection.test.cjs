@@ -198,3 +198,16 @@ test("WSP lookup requests both types and keeps WSP records on subsequent pages",
     assert.equal(urls[1], "https://example.test/service/Scheme?$skiptoken=next");
     assert.equal(schemes.map(row => row.SchemeType).join(","), "ADVANCE,WSP ADVANCE");
 });
+
+
+test("delivery validation requires the same customer and price level across all items", () => {
+    const controller = loadController();
+    const row = {customerId: '100', PriceLevel: 'A', billingDocumentDate: '2026-01-01'};
+    assert.equal(controller._getDeliveryValidationError([row, {...row}]), '');
+    assert.match(controller._getDeliveryValidationError([row, {...row, PriceLevel: 'B'}]), /same price level/);
+    assert.match(controller._getDeliveryValidationError([row, {...row, PriceLevel: ''}]), /same price level/);
+    assert.match(controller._getDeliveryValidationError([row, {...row, customerId: '200'}]), /single customer/);
+    assert.equal(controller._formatDeliveryHeaderValues([row, {...row}], 'PriceLevel'), 'A');
+    assert.equal(controller._formatDeliveryHeaderValues([{Incoterm: 'FOB'}, {Incoterm: 'CIF'}], 'Incoterm'), 'FOB, CIF');
+    assert.equal(controller._formatDeliveryHeaderValues([], 'customerName'), '?');
+});
