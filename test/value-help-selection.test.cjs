@@ -9,7 +9,8 @@ function loadController(environment = {}) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../webapp/controller/View1.controller.js"), "utf8"), {
         ...environment,
         sap: { ui: { define(deps, factory) {
-            controller = factory({ extend: (name, methods) => methods });
+            controller = factory({ extend: (name, methods) => methods },
+                null, null, null, null, null, null, { show() {} });
         } } }
     });
     return controller;
@@ -171,6 +172,42 @@ test("WSP auto-selection uses Discount 2 priority, selected Discount 1 and GST",
         { SchemeName: "Middle", Discount1: "10%", Discount2: "8.7%", AdvAmount: 100 }
     ];
     assert.equal(controller._getWspAutoSelectedSchemes(schemes).map(row => row.SchemeName).join(","), "High,Middle");
+});
+
+test("billing and clearing payloads contain only confirmed WSP schemes", () => {
+    const controller = loadController();
+    const state = {
+        schemeType: "advance",
+        items: [{ deliveryNumber: "D1", customerId: "C1", rate: 50,
+            quantityinbaseunit: 1, gstRate: 0, transactionCurrency: "INR" }]
+    };
+    controller.getView = () => ({ getModel: () => ({
+        getProperty: key => state[key.slice(1)],
+        setProperty: (key, value) => { state[key.slice(1)] = value; }
+    }) });
+    const schemes = ["A", "B", "C"].map((name, index) => ({
+        SchemeName: name, AccountingDocument: name,
+        PostingDate: `2026-01-0${index + 1}`, Discount1: "0%",
+        Discount2: "0%", AdvAmount: 100
+    }));
+    const documents = () => controller._buildSchemeBillingPayload()._Schemes
+        .map(row => row.accountingdocument).join(",");
+    controller._applySelectedSchemes(controller._getWspAutoSelectedSchemes(schemes));
+    assert.equal(documents(), "A");
+    // Manual confirmation replaces the automatic selection, even with positive carry forward.
+    controller._iSchemeContext = 1;
+    controller.onSchemeValueHelpConfirm({
+        getSource: () => ({
+            _iSchemeContext: 1, close() {},
+            getModel: () => ({ getData: () => schemes.map(row => ({ ...row, ValueHelpKey: row.SchemeName })) })
+        }),
+        getParameter: () => ["B", "C"].map(key => ({ getKey: () => key }))
+    });
+    assert.equal(documents(), "B,C");
+    assert.equal(controller._buildCustomerClearingPayload({ PreliminaryBillingDocument: "P1" })
+        .Advances.map(row => row.Document).join(","), "B,C");
+    controller._applySelectedSchemes([]);
+    assert.equal(controller._buildCustomerClearingPayload({}).Advances.length, 0);
 });
 
 

@@ -1298,7 +1298,7 @@ sap.ui.define([
                         this._getSelectedCustomerId() !== sCustomerId) {
                         return;
                     }
-                    this._applySelectedSchemes(aSchemes);
+                    this._applySelectedSchemes(this._getWspAutoSelectedSchemes(aSchemes));
                     if (!aSchemes.length) {
                         MessageToast.show("No WSP Advance schemes found for this customer.");
                     }
@@ -1424,7 +1424,7 @@ sap.ui.define([
 
                         // eslint-disable-next-line no-nested-ternary
                         var aSelected = oDetails ? (oDetails.SelectedSchemes || [oDetails]) :
-                            (sSchemeType === "advance" ? aSchemes : []);
+                            (sSchemeType === "advance" ? this._getWspAutoSelectedSchemes(aSchemes) : []);
 
                         var aKeys = aSelected.map(this._getSchemeValueHelpKey.bind(this));
 
@@ -1797,6 +1797,31 @@ sap.ui.define([
         },
 
 
+
+        _getWspAutoSelectedSchemes(aSchemes) {
+            var aItems = this.getView().getModel().getProperty("/items") || [];
+            if (!aSchemes.length || !aItems.length) {
+                return [];
+            }
+            var aOrdered = this._combineAdvanceSchemes(aSchemes, "advance").SelectedSchemes;
+            var aSelected = [];
+            var fGstRate = Number(aItems[0].gstRate) || 0;
+            for (var i = 0; i < aOrdered.length; i++) {
+                aSelected.push(aOrdered[i]);
+                // Recalculate Discount 1 using only the schemes selected so far.
+                var oCombined = this._combineAdvanceSchemes(aSelected, "advance");
+                var fDiscount1 = this._parsePercent(oCombined.Discount1);
+                var fNetValue = aItems.reduce(function (fTotal, oItem) {
+                    return fTotal + (Number(oItem.rate) || 0) *
+                        (Number(oItem.quantityinbaseunit) || 0) * (1 - fDiscount1);
+                }, 0);
+                var oCalculation = this._calculateAdvanceDiscount2(aSelected, fNetValue, fGstRate);
+                if (oCalculation.TotalAdvanceRemaining > 0) {
+                    break;
+                }
+            }
+            return aSelected;
+        },
 
      _combineAdvanceSchemes(aSchemes, sSchemeType) {
 
