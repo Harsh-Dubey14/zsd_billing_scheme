@@ -1,0 +1,88 @@
+
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:vh="sap.ui.comp.valuehelpdialog"
+    xmlns:fb="sap.ui.comp.filterbar">
+
+    <vh:ValueHelpDialog
+        id="customerValueHelpDialog"
+        title="Select Customer"
+        class="zbsCustomerValueHelp"
+        contentWidth="54rem"
+        contentHeight="30rem"
+        stretchOnPhone="true"
+        key="Customer"
+        descriptionKey="CustomerName"
+        tokenDisplayBehaviour="descriptionAndId"
+        supportMultiselect="false"
+        supportRanges="false"
+        ok=".onCustomerValueHelpConfirm"
+        cancel=".onCustomerValueHelpCancel">
+
+        <vh:filterBar>
+
+            <fb:FilterBar
+                id="customerFilterBar"
+                advancedMode="true"
+                filterBarExpanded="true"
+                showGoOnFB="true"
+                showClearOnFB="true"
+                showFilterConfiguration="false"
+                filterContainerWidth="19rem"
+                search=".onCustomerValueHelpSearch"
+                clear=".onCustomerValueHelpClear">
+
+                <fb:filterGroupItems>
+
+                    <!-- CUSTOMER NUMBER -->
+                    <fb:FilterGroupItem
+                        name="Customer"
+                        label="Customer"
+                        groupName="CustomerFilters"
+                        visibleInFilterBar="true">
+
+                        <fb:control>
+
+                            <Input
+                                id="customerFilterCustomer"
+                                class="zbsCustomerFilterInput"
+                                width="100%"
+                                placeholder="Enter customer number"
+                                showClearIcon="true"
+                                submit=".onCustomerValueHelpSearch" />
+
+                        </fb:control>
+
+                    </fb:FilterGroupItem>
+
+                    <!-- CUSTOMER NAME -->
+                    <fb:FilterGroupItem
+                        name="CustomerName"
+                        label="Customer Name"
+                        groupName="CustomerFilters"
+                        visibleInFilterBar="true">
+
+                        <fb:control>
+
+                            <Input
+                                id="customerFilterCustomerName"
+                                class="zbsCustomerFilterInput"
+                                width="100%"
+                                placeholder="Enter customer name"
+                                showClearIcon="true"
+                                submit=".onCustomerValueHelpSearch" />
+
+                        </fb:control>
+
+                    </fb:FilterGroupItem>
+
+                </fb:filterGroupItems>
+
+            </fb:FilterBar>
+
+        </vh:filterBar>
+
+    </vh:ValueHelpDialog>
+
+</core:FragmentDefinition>

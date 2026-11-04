@@ -44,6 +44,17 @@
     width: 100%;
 }
 
+.zbsCustomerFilters {
+    width: 100%;
+    min-width: min(38rem, calc(100vw - 6rem));
+    gap: 1rem;
+}
+
+.zbsCustomerFilterField {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
 .zbsField {
     width: 100%;
 }
@@ -282,5 +293,75 @@
 
     .zbsPostButton {
         min-width: auto;
+    }
+}
+
+/* =============================================
+   CUSTOMER VALUE HELP - MODERN FIORI
+============================================= */
+
+.zbsCustomerValueHelp {
+    max-width: 95vw;
+}
+
+/* =============================================
+   FILTER INPUTS
+============================================= */
+
+.zbsCustomerValueHelp
+.zbsCustomerFilterInput {
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Input field appearance */
+.zbsCustomerValueHelp
+.zbsCustomerFilterInput .sapMInputBaseContentWrapper {
+    border-radius: 0.375rem;
+    min-height: 2.25rem;
+    transition: border-color 0.2s ease,
+                box-shadow 0.2s ease;
+}
+
+/* Input text */
+.zbsCustomerValueHelp
+.zbsCustomerFilterInput .sapMInputBaseInner {
+    font-size: 0.875rem;
+    min-height: 2.125rem;
+}
+
+/* Focus effect */
+.zbsCustomerValueHelp
+.zbsCustomerFilterInput.sapMFocus
+.sapMInputBaseContentWrapper {
+    box-shadow: 0 0 0 1px
+        var(--sapField_Focus_BorderColor);
+}
+
+/* =============================================
+   FILTER BAR
+============================================= */
+
+.zbsCustomerValueHelp
+.sapUiCompFilterBar {
+    width: 100%;
+}
+
+/* =============================================
+   RESPONSIVE BEHAVIOR
+============================================= */
+
+@media screen and (max-width: 600px) {
+
+    .zbsCustomerValueHelp {
+        width: 100% !important;
+        max-width: 100%;
+    }
+
+    .zbsCustomerValueHelp
+    .zbsCustomerFilterInput {
+        width: 100% !important;
+        min-width: 0;
     }
 }

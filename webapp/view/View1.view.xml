@@ -77,10 +77,22 @@
                         width="100%"
                         class="zbsFilterGrid"
                     >
+                        <VBox class="zbsField">
+                            <layoutData>
+                                <l:GridData span="XL3 L3 M6 S12" />
+                            </layoutData>
+                            <Label text="Customer" labelFor="customerInput" class="zbsFieldLabel" />
+                            <Input id="customerInput" width="100%"
+                                placeholder="Select customer" showValueHelp="true" valueHelpOnly="true"
+                                value="{/selectedCustomer}" valueHelpRequest=".onCustomerValueHelpRequest" />
+                            <Text text="{/selectedCustomerName}" wrapping="true" class="sapUiTinyMarginTop" />
+                            <Button text="Clear Customer" type="Transparent"
+                                visible="{= !!${/selectedCustomer} }" press=".onClearCustomer" />
+                        </VBox>
                         <!-- DELIVERY NUMBER -->
                         <VBox class="zbsField">
                             <layoutData>
-                                <l:GridData span="XL4 L4 M6 S12" />
+                                <l:GridData span="XL3 L3 M6 S12" />
                             </layoutData>
 
                             <Label
@@ -100,33 +112,12 @@
                                 tokenUpdate=".onDeliveryTokenUpdate"
                             />
 
-                            <HBox
-                                wrap="Wrap"
-                                alignItems="Center"
-                                class="sapUiSmallMarginTop"
-                            >
-                                <Button
-                                    text="Fetch Delivery Items"
-                                    icon="sap-icon://refresh"
-                                    type="Emphasized"
-                                    press=".onFetchItems"
-                                    enabled="{/hasDeliveryNumbers}"
-                                    class="zbsFetchButton sapUiTinyMarginEnd"
-                                />
-                                <Button
-                                    text="Clear"
-                                    icon="sap-icon://decline"
-                                    type="Transparent"
-                                    tooltip="Clear delivery input"
-                                    press=".onClearDeliveryInput"
-                                />
-                            </HBox>
                         </VBox>
 
                         <!-- SCHEME TYPE -->
                         <VBox class="zbsField">
                             <layoutData>
-                                <l:GridData span="XL3 L3 M6 S12" />
+                                <l:GridData span="XL2 L2 M6 S12" />
                             </layoutData>
 
                             <Label
@@ -161,7 +152,7 @@
                         <!-- SCHEME -->
                         <VBox class="zbsField">
                             <layoutData>
-                                <l:GridData span="XL5 L5 M12 S12" />
+                                <l:GridData span="XL3 L3 M6 S12" />
                             </layoutData>
 
                             <Label
@@ -182,6 +173,19 @@
                                 value="{/schemeSelectedText}"
                             />
                         </VBox>
+                        <HBox justifyContent="Start" alignItems="Center">
+                            <layoutData>
+                                <l:GridData span="XL12 L12 M12 S12" />
+                            </layoutData>
+                            <Button
+                                text="Fetch Delivery Items"
+                                icon="sap-icon://refresh"
+                                type="Emphasized"
+                                press=".onFetchItems"
+                                enabled="{/hasDeliveryNumbers}"
+                                class="zbsFetchButton"
+                            />
+                        </HBox>
                     </l:Grid>
 
                     <!-- SCHEME INFORMATION -->
@@ -706,7 +710,7 @@
                     type="Transparent"
                     press=".onClearAll"
                     visible="{= !${/postingComplete} }"
-                    enabled="{= ${/hasDeliveryNumbers} || !!${/schemeType} || ${/items}.length > 0 }"
+                    enabled="{= !${/posting} }"
                 />
 
                 <Button

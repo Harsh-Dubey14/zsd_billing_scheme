@@ -39,6 +39,9 @@ sap.ui.define([
                 itemCount: 0,
                 deliveryCount: 0,
                 hasDeliveryNumbers: false,
+                selectedCustomer: "",
+                selectedCustomerName: "",
+                selectedCustomers: [],
                 schemeDetails: null,
                 schemeType: "regular",
                 schemeSelectedText: "",
@@ -164,6 +167,9 @@ sap.ui.define([
 
             var oModel = this.getView().getModel();
             oModel.setProperty("/postingComplete", false);
+            oModel.setProperty("/selectedCustomer", "");
+            oModel.setProperty("/selectedCustomerName", "");
+            oModel.setProperty("/selectedCustomers", []);
             oModel.setProperty("/clearingAvailable", false);
             oModel.setProperty("/clearing", false);
             oModel.setProperty("/clearingComplete", false);
@@ -371,7 +377,7 @@ sap.ui.define([
 
 
 
-        _filterValueHelp(sPrefix, aFields, oTable, mOperators) {
+        _filterValueHelp(sPrefix, aFields, oTable, mOperators, aRequiredFilters) {
 
             var aFilters = aFields.map(function (sField) {
 
@@ -381,7 +387,7 @@ sap.ui.define([
 
             }.bind(this)).filter(Boolean);
 
-            (oTable.getBinding("rows") || oTable.getBinding("items")).filter(aFilters);
+            (oTable.getBinding("rows") || oTable.getBinding("items")).filter(aFilters.concat(aRequiredFilters || []));
 
             this.byId(sPrefix + "ValueHelpDialog").update();
 
@@ -396,6 +402,131 @@ sap.ui.define([
         },
 
 
+
+        onCustomerValueHelpRequest() {
+            var oView = this.getView();
+            if (!this._pCustomerValueHelpDialog) {
+                this._pCustomerValueHelpDialog = Fragment.load({
+                    id: oView.getId(),
+                    name: "com.zeel.billingscheme.billingscheme.fragment.CustomerValueHelpDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    oView.addDependent(oDialog);
+                    oDialog.setModel(oView.getModel("deliveryService"), "customers");
+                    oDialog.setTable(new MobileTable({ mode: "SingleSelectLeft",
+                        includeItemInSelection: true, growing: true, growingThreshold: 100 }));
+                    return oDialog.getTableAsync().then(function (oTable) {
+                        this._oCustomerValueHelpTable = oTable;
+                        this._configureValueHelpTable(oDialog, oTable, "customers", "/Get_Customer", [
+                            ["Customer", "Customer", "35%"],
+                            ["CustomerName", "Customer Name", "65%"]
+                        ]);
+                        return oDialog;
+                    }.bind(this));
+                }.bind(this));
+            }
+            this._pCustomerValueHelpDialog.then(function (oDialog) {
+                oDialog.setTokens(this._getSelectedCustomers().map(function (oCustomer) {
+                    return new Token({ key: oCustomer.Customer, text: oCustomer.CustomerName });
+                }));
+                this.onCustomerValueHelpClear();
+                oDialog.open();
+                oDialog.update();
+            }.bind(this)).catch(function (oError) {
+                MessageBox.error("Could not open customers: " + oError.message);
+            });
+        },
+
+        onCustomerValueHelpSearch() {
+            this._filterValueHelp("customer", ["Customer", "CustomerName"], this._oCustomerValueHelpTable);
+        },
+
+        onCustomerValueHelpClear() {
+            this._clearValueHelpFilters("customer", ["Customer", "CustomerName"]);
+            this.onCustomerValueHelpSearch();
+        },
+
+        async onCustomerValueHelpConfirm(oEvent) {
+            var oDialog = oEvent.getSource();
+            var aTokens = oEvent.getParameter("tokens") || [];
+            if (aTokens.length > 1) {
+                MessageBox.error("Please select one customer only.");
+                return;
+            }
+            var oBinding;
+            oDialog.setBusy(true);
+            try {
+                if (aTokens.length) {
+                    oBinding = this.getView().getModel("deliveryService").bindList("/Get_Customer", null, null,
+                        [new Filter({ filters: aTokens.map(function (oToken) {
+                            return new Filter("Customer", FilterOperator.EQ, oToken.getKey());
+                        }), and: false })]);
+                    var aContexts = await oBinding.requestContexts(0, aTokens.length);
+                    var aCustomers = aContexts.map(function (oContext) { return oContext.getObject(); });
+                    if (aCustomers.length !== aTokens.length || aTokens.some(function (oToken) {
+                        return !aCustomers.some(function (oCustomer) { return oCustomer.Customer === oToken.getKey(); });
+                    })) {
+                        MessageBox.error("Please select valid customers.");
+                        return;
+                    }
+                    this._setSelectedCustomers(aCustomers);
+                } else {
+                    this._setSelectedCustomers([]);
+                }
+                oDialog.close();
+            } catch (oError) {
+                MessageBox.error("Could not select customer: " + oError.message);
+            } finally {
+                oDialog.setBusy(false);
+                if (oBinding) { oBinding.destroy(); }
+            }
+        },
+
+        onCustomerValueHelpCancel(oEvent) {
+            oEvent.getSource().close();
+        },
+
+        onClearCustomer() {
+            this._setSelectedCustomers([]);
+        },
+
+        _setSelectedCustomer(oCustomer) {
+            this._setSelectedCustomers(oCustomer.Customer ? [oCustomer] : []);
+        },
+
+        _getSelectedCustomers() {
+            var oModel = this.getView().getModel();
+            var aCustomers = oModel.getProperty("/selectedCustomers");
+            if (Array.isArray(aCustomers)) { return aCustomers; }
+            var sCustomer = oModel.getProperty("/selectedCustomer");
+            return sCustomer ? [{ Customer: sCustomer, CustomerName: oModel.getProperty("/selectedCustomerName") || "" }] : [];
+        },
+
+        _setSelectedCustomers(aCustomers) {
+            var oModel = this.getView().getModel();
+            var aUnique = Array.from(new Map(aCustomers.map(function (oCustomer) {
+                return [String(oCustomer.Customer), { Customer: String(oCustomer.Customer), CustomerName: oCustomer.CustomerName || "" }];
+            })).values());
+            var fnKeys = function (aRows) { return JSON.stringify(aRows.map(function (oRow) { return oRow.Customer; }).sort()); };
+            if (fnKeys(aUnique) !== fnKeys(this._getSelectedCustomers())) {
+                this._clearAll();
+                if (this._oDeliveryValueHelpTable) {
+                    this._clearValueHelpFilters("delivery", ["DeliveryDocument", "Plant", "PlantName", "Customer", "FullName"]);
+                }
+            }
+            oModel.setProperty("/selectedCustomers", aUnique);
+            oModel.setProperty("/selectedCustomer", aUnique.map(function (oCustomer) { return oCustomer.Customer; }).join(", "));
+            oModel.setProperty("/selectedCustomerName", aUnique.map(function (oCustomer) { return oCustomer.CustomerName; }).join(", "));
+            if (this._oDeliveryValueHelpTable) { this.onDeliveryValueHelpSearch(); }
+        },
+
+        onCustomerTokenUpdate(oEvent) {
+            if (oEvent.getParameter("type") !== "removed") { return; }
+            var aRemoved = (oEvent.getParameter("removedTokens") || []).map(function (oToken) { return oToken.getKey(); });
+            this._setSelectedCustomers(this._getSelectedCustomers().filter(function (oCustomer) {
+                return aRemoved.indexOf(oCustomer.Customer) === -1;
+            }));
+        },
 
         onDeliveryValueHelpRequest() {
 
@@ -459,7 +590,12 @@ sap.ui.define([
 
         onDeliveryValueHelpSearch() {
 
-            this._filterValueHelp("delivery", ["DeliveryDocument", "Plant", "PlantName", "Customer", "FullName"], this._oDeliveryValueHelpTable);
+            var aCustomers = this._getSelectedCustomers();
+            this._filterValueHelp("delivery", ["DeliveryDocument", "Plant", "PlantName", "Customer", "FullName"],
+                this._oDeliveryValueHelpTable, null,
+                aCustomers.length ? [new Filter({ filters: aCustomers.map(function (oCustomer) {
+                    return new Filter("Customer", FilterOperator.EQ, oCustomer.Customer);
+                }), and: false })] : []);
 
         },
 
@@ -509,6 +645,14 @@ sap.ui.define([
 
                     }
 
+                    var aSelectedCustomers = this._getSelectedCustomers().map(function (oCustomer) { return oCustomer.Customer; });
+                    if (aSelectedCustomers.length && aRows.some(function (oRow) {
+                        return aSelectedCustomers.indexOf(String(oRow.Customer || "")) === -1;
+                    })) {
+                        MessageBox.error("Please select deliveries for the selected customers only.");
+                        return;
+                    }
+
                     if (aRows.some(function (oRow) { return (oRow.FullName || "") !== (aRows[0].FullName || ""); })) {
 
                         MessageBox.error("Please select delivery numbers for a single customer only.");
@@ -532,6 +676,10 @@ sap.ui.define([
                 this._syncDeliveryState();
 
                 oDialog.close();
+
+                if (aValues.length) {
+                    this.onFetchItems();
+                }
 
             } catch (oError) {
 
@@ -836,6 +984,7 @@ sap.ui.define([
 
 
             this._resetDeliveryScheme();
+            var iFetchContext = this._iSchemeContext;
             BusyIndicator.show(0);
 
 
@@ -844,8 +993,15 @@ sap.ui.define([
             return this._readDeliveryItems(aDeliveryNumbers)
 
                 .then(function (aAllItems) {
+                    if (this._iSchemeContext !== iFetchContext) { return; }
 
                     var sValidationError = this._getDeliveryValidationError(aAllItems);
+                    var aSelectedCustomers = this._getSelectedCustomers().map(function (oCustomer) { return oCustomer.Customer; });
+                    if (aSelectedCustomers.length && aAllItems.some(function (oItem) {
+                        return aSelectedCustomers.indexOf(String(oItem.customerId || "")) === -1;
+                    })) {
+                        sValidationError = "Please enter deliveries for the selected customers (" + aSelectedCustomers.join(", ") + ") only.";
+                    }
 
                     if (sValidationError) {
 
